@@ -28,32 +28,20 @@ void BuildDefaultDockLayout(ImGuiID dockspace_id) {
     ImGuiID dock_main = dockspace_id;
     ImGuiID dock_left =
         ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Left, 0.22f, nullptr, &dock_main);
-    ImGuiID dock_right =
-        ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right, 0.22f, nullptr, &dock_main);
     ImGuiID dock_bottom =
         ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Down, 0.26f, nullptr, &dock_main);
 
     ImGuiID dock_left_top =
         ImGui::DockBuilderSplitNode(dock_left, ImGuiDir_Down, 0.55f, nullptr, &dock_left);
-    ImGuiID dock_right_top =
-        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down, 0.38f, nullptr, &dock_right);
-    ImGuiID dock_right_mid =
-        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down, 0.45f, nullptr, &dock_right);
 
     ImGuiID dock_bottom_right =
         ImGui::DockBuilderSplitNode(dock_bottom, ImGuiDir_Right, 0.45f, nullptr, &dock_bottom);
 
     ImGui::DockBuilderDockWindow("Scene", dock_left);
-    ImGui::DockBuilderDockWindow("Operations", dock_left);
     ImGui::DockBuilderDockWindow("Node Properties", dock_left_top);
     ImGui::DockBuilderDockWindow("Scene for Camera A", dock_main);
-    ImGui::DockBuilderDockWindow("Commands", dock_right_top);
-    ImGui::DockBuilderDockWindow("Layers", dock_right_mid);
-    ImGui::DockBuilderDockWindow("Debug View", dock_right);
     ImGui::DockBuilderDockWindow("Log", dock_bottom);
     ImGui::DockBuilderDockWindow("Viewport Config", dock_bottom_right);
-    ImGui::DockBuilderDockWindow("Physics", dock_bottom_right);
-    ImGui::DockBuilderDockWindow("Fly Camera", dock_bottom_right);
 
     ImGui::DockBuilderFinish(dockspace_id);
 }
@@ -81,17 +69,6 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
     ImGui::PopStyleVar(3);
 
     if (ImGui::BeginMenuBar()) {
-        if (ImGui::BeginMenu("File")) {
-            ImGui::MenuItem("New Scene");
-            ImGui::MenuItem("Open...");
-            ImGui::MenuItem("Save");
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Edit")) {
-            ImGui::MenuItem("Undo");
-            ImGui::MenuItem("Redo");
-            ImGui::EndMenu();
-        }
         if (ImGui::BeginMenu("Playback")) {
             bool can_play = play_state_ != PlayState::Playing;
             bool can_pause = play_state_ == PlayState::Playing;
@@ -122,16 +99,10 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
                     request_show_scene_ = true;
                 }
             }
-            ImGui::MenuItem("Operations", nullptr, &show_operations_);
             ImGui::MenuItem("Node Properties", nullptr, &show_node_properties_);
             ImGui::MenuItem("Viewport", nullptr, &show_viewport_);
-            ImGui::MenuItem("Commands", nullptr, &show_commands_);
-            ImGui::MenuItem("Layers", nullptr, &show_layers_);
-            ImGui::MenuItem("Debug View", nullptr, &show_debug_view_);
             ImGui::MenuItem("Log", nullptr, &show_log_);
             ImGui::MenuItem("Viewport Config", nullptr, &show_viewport_config_);
-            ImGui::MenuItem("Physics", nullptr, &show_physics_);
-            ImGui::MenuItem("Fly Camera", nullptr, &show_fly_camera_);
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
@@ -190,18 +161,6 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
         ImGui::End();
     }
 
-    if (show_operations_) {
-        if (ImGui::Begin("Operations", &show_operations_)) {
-            ImGui::Button("Undo");
-            ImGui::Button("Redo");
-            ImGui::Separator();
-            ImGui::Button("Attach");
-            ImGui::Button("Detach");
-            ImGui::Button("Triangulate");
-        }
-        ImGui::End();
-    }
-
     if (show_node_properties_) {
         if (ImGui::Begin("Node Properties", &show_node_properties_)) {
             if (IScene* active = scenes.ActiveScene()) {
@@ -238,42 +197,13 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
         ImGui::End();
     }
 
-    if (show_commands_) {
-        if (ImGui::Begin("Commands", &show_commands_)) {
-            ImGui::Text("Active command: none");
-            ImGui::Separator();
-            ImGui::BulletText("Selection");
-            ImGui::BulletText("Brush");
-            ImGui::BulletText("Transform");
-        }
-        ImGui::End();
-    }
-
-    if (show_layers_) {
-        if (ImGui::Begin("Layers", &show_layers_)) {
-            ImGui::Selectable("content");
-            ImGui::Selectable("controller");
-            ImGui::Selectable("tool");
-            ImGui::Selectable("brush");
-        }
-        ImGui::End();
-    }
-
-    if (show_debug_view_) {
-        if (ImGui::Begin("Debug View", &show_debug_view_)) {
-            ImGui::Text("Viewport helpers");
-            ImGui::Button("Toggle Gizmos");
-            ImGui::Button("Wireframe");
-        }
-        ImGui::End();
-    }
-
     if (show_log_) {
         if (ImGui::Begin("Log", &show_log_)) {
             if (ImGui::SmallButton("Clear")) {
                 Logger::Clear();
             }
             ImGui::Separator();
+            bool at_bottom = ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 1.0f;
             for (const LogEntry& entry : Logger::Entries()) {
                 const char* label = "INFO";
                 ImVec4 color = ImVec4(0.8f, 0.85f, 0.9f, 1.0f);
@@ -289,6 +219,9 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
                 ImGui::TextUnformatted(line.c_str());
                 ImGui::PopStyleColor();
             }
+            if (at_bottom) {
+                ImGui::SetScrollHereY(1.0f);
+            }
         }
         ImGui::End();
     }
@@ -297,22 +230,6 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
         if (ImGui::Begin("Viewport Config", &show_viewport_config_)) {
             ImGui::Text("Clear Color");
             ImGui::ColorEdit3("##clear", clear_color_);
-        }
-        ImGui::End();
-    }
-
-    if (show_physics_) {
-        if (ImGui::Begin("Physics", &show_physics_)) {
-            ImGui::Checkbox("Enable", &physics_enabled_);
-            ImGui::SliderFloat("Gravity", &gravity_, -20.0f, 0.0f);
-        }
-        ImGui::End();
-    }
-
-    if (show_fly_camera_) {
-        if (ImGui::Begin("Fly Camera", &show_fly_camera_)) {
-            ImGui::SliderFloat("Sensitivity", &fly_sensitivity_, 0.0f, 2.0f);
-            ImGui::SliderFloat("Speed", &fly_speed_, 0.0f, 10.0f);
         }
         ImGui::End();
     }
