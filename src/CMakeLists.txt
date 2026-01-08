@@ -66,12 +66,14 @@ if(APPLE)
   target_compile_definitions(engine PUBLIC GL_SILENCE_DEPRECATION)
 endif()
 
+file(GLOB APP_SCENE_SOURCES CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/app/scenes/*.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/app/scenes/*.h
+)
+
 add_executable(sandbox
   app/main.cpp
-  app/scenes/Example2DScene.cpp
-  app/scenes/Example2DScene.h
-  app/scenes/Example3DScene.cpp
-  app/scenes/Example3DScene.h
+  ${APP_SCENE_SOURCES}
 )
 
 target_link_libraries(sandbox PRIVATE engine)

@@ -1,5 +1,4 @@
-#include "app/scenes/Example2DScene.h"
-#include "app/scenes/Example3DScene.h"
+#include "app/scenes/SceneRegistry.h"
 #include "engine/core/Color.h"
 #include "engine/core/IRenderer.h"
 #include "engine/core/IWindow.h"
@@ -86,8 +85,7 @@ int main(int argc, char** argv) {
     Logger::Info("Editor initialized.");
 
     SceneManager scenes;
-    scenes.AddScene(std::make_unique<Example2DScene>());
-    scenes.AddScene(std::make_unique<Example3DScene>());
+    RegisterScenes(scenes);
 
     double last_time = glfwGetTime();
 

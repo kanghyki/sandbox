@@ -2,7 +2,10 @@ BUILD_DIR ?= build
 
 all: build
 
-configure:
+generate_scenes:
+	python3 tools/gen_scene_registry.py
+
+configure: generate_scenes
 	cmake -S . -B $(BUILD_DIR) -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 build: configure
