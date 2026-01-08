@@ -7,7 +7,10 @@ class GlPresenter {
     bool Init();
     void Shutdown();
     void Resize(int width, int height);
+    bool Upload(const IRenderer& renderer);
+    void DrawFullscreen();
     void Present(const IRenderer& renderer);
+    unsigned int TextureId() const { return texture_; }
 
   private:
     unsigned int program_ = 0;

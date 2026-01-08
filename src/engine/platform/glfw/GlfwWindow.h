@@ -12,9 +12,12 @@ class GlfwWindow : public IWindow {
     bool IsValid() const override { return window_ != nullptr; }
     bool ShouldClose() const override;
     void SetShouldClose(bool value) override;
+    void SetFullscreen(bool enabled) override;
+    bool IsFullscreen() const override { return is_fullscreen_; }
     void PollEvents() override;
     void SwapBuffers() override;
     void GetFramebufferSize(int* width, int* height) const override;
+    void* NativeHandle() const override { return window_; }
 
     InputState& Input() override { return input_; }
     const InputState& Input() const override { return input_; }
@@ -26,4 +29,9 @@ class GlfwWindow : public IWindow {
 
     GLFWwindow* window_ = nullptr;
     InputState input_{};
+    bool is_fullscreen_ = false;
+    int windowed_x_ = 0;
+    int windowed_y_ = 0;
+    int windowed_w_ = 800;
+    int windowed_h_ = 600;
 };

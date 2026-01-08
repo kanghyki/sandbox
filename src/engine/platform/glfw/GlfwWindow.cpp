@@ -22,11 +22,19 @@ GlfwWindow::GlfwWindow(int width, int height, const char* title) {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    window_ = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    int init_w = width;
+    int init_h = height;
+    window_ = glfwCreateWindow(init_w, init_h, title, nullptr, nullptr);
     if (!window_) {
         std::cerr << "Failed to create GLFW window\n";
         return;
     }
+
+    glfwMaximizeWindow(window_);
+    windowed_w_ = init_w;
+    windowed_h_ = init_h;
+    glfwGetWindowPos(window_, &windowed_x_, &windowed_y_);
+    glfwGetWindowSize(window_, &windowed_w_, &windowed_h_);
 
     glfwMakeContextCurrent(window_);
     glfwSwapInterval(1);
@@ -53,6 +61,29 @@ bool GlfwWindow::ShouldClose() const { return window_ ? glfwWindowShouldClose(wi
 void GlfwWindow::SetShouldClose(bool value) {
     if (window_) {
         glfwSetWindowShouldClose(window_, value ? GLFW_TRUE : GLFW_FALSE);
+    }
+}
+
+void GlfwWindow::SetFullscreen(bool enabled) {
+    if (!window_ || is_fullscreen_ == enabled) {
+        return;
+    }
+
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = monitor ? glfwGetVideoMode(monitor) : nullptr;
+    if (!monitor || !mode) {
+        return;
+    }
+
+    if (enabled) {
+        glfwGetWindowPos(window_, &windowed_x_, &windowed_y_);
+        glfwGetWindowSize(window_, &windowed_w_, &windowed_h_);
+        glfwSetWindowMonitor(window_, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+        is_fullscreen_ = true;
+    } else {
+        glfwSetWindowMonitor(window_, nullptr, windowed_x_, windowed_y_, windowed_w_, windowed_h_,
+                             0);
+        is_fullscreen_ = false;
     }
 }
 

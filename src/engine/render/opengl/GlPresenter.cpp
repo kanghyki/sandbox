@@ -168,30 +168,46 @@ void GlPresenter::Resize(int width, int height) {
     glViewport(0, 0, tex_width_, tex_height_);
 }
 
-void GlPresenter::Present(const IRenderer& renderer) {
+bool GlPresenter::Upload(const IRenderer& renderer) {
     if (!initialized_) {
-        return;
+        return false;
     }
 
     if (renderer.Width() <= 0 || renderer.Height() <= 0) {
-        return;
+        return false;
     }
 
     if (renderer.Width() != tex_width_ || renderer.Height() != tex_height_) {
         Resize(renderer.Width(), renderer.Height());
     }
 
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture_);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, renderer.Width(), renderer.Height(), GL_RGBA,
                     GL_UNSIGNED_BYTE, renderer.Pixels().data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return true;
+}
+
+void GlPresenter::DrawFullscreen() {
+    if (!initialized_) {
+        return;
+    }
+
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(program_);
+    glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(vao_);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
     glUseProgram(0);
+}
+
+void GlPresenter::Present(const IRenderer& renderer) {
+    if (!Upload(renderer)) {
+        return;
+    }
+    DrawFullscreen();
 }
