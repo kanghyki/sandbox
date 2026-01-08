@@ -59,7 +59,10 @@ add_library(engine
   engine/ui/ImGuiLayer.h
 )
 
-target_include_directories(engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(engine PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/engine/math/sgm/public
+)
 target_link_libraries(engine PUBLIC glfw OpenGL::GL imgui_lib)
 
 if(APPLE)
