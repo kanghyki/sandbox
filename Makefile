@@ -6,11 +6,9 @@ SRC_FILES := $(shell find $(SRC_DIR) -name '*.cpp')
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
 # -----( LIB )-----
-LIB_PATH := lib
-LIBS     :=
 
-LIB_ARCS := $(foreach L,$(LIBS),$(LIB_PATH)/$(L)/lib$(L).a)
-LIB_INCS := $(foreach L,$(LIBS),-I$(LIB_PATH)/$(L))
+LIB_ARCS := $(wildcard lib/*/*.a)
+LIB_INCS := $(addprefix -I,$(dir $(LIB_ARCS)))
 
 # -----( RULES )-----
 NAME     = sandbox
