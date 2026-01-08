@@ -76,7 +76,6 @@ bool ImGuiLayer::Init(GLFWwindow* window) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
     io.IniFilename = "imgui.ini";
     if (io.IniFilename && io.IniFilename[0] != '\0') {

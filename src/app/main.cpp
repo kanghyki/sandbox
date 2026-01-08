@@ -1,3 +1,5 @@
+#include "app/scenes/Example2DScene.h"
+#include "app/scenes/Example3DScene.h"
 #include "engine/core/Color.h"
 #include "engine/core/IRenderer.h"
 #include "engine/core/IWindow.h"
@@ -5,13 +7,14 @@
 #include "engine/platform/glfw/GlfwWindow.h"
 #include "engine/render/PixelRenderer.h"
 #include "engine/render/opengl/GlPresenter.h"
+#include "engine/scene/FrameContext.h"
 #include "engine/scene/SceneManager.h"
-#include "app/scenes/DotProductScene.h"
 #include "engine/ui/EditorUi.h"
 #include "engine/ui/ImGuiLayer.h"
 
 #include <GLFW/glfw3.h>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 
@@ -83,7 +86,8 @@ int main(int argc, char** argv) {
     Logger::Info("Editor initialized.");
 
     SceneManager scenes;
-    scenes.AddScene(std::make_unique<DotProductScene>());
+    scenes.AddScene(std::make_unique<Example2DScene>());
+    scenes.AddScene(std::make_unique<Example3DScene>());
 
     double last_time = glfwGetTime();
 
@@ -115,7 +119,7 @@ int main(int argc, char** argv) {
             return static_cast<uint8_t>(v * 255.0f);
         };
         renderer->Clear(ColorRGBA(to_byte(clear_color[0]), to_byte(clear_color[1]),
-                                   to_byte(clear_color[2]), 255));
+                                  to_byte(clear_color[2]), 255));
 
         double now = glfwGetTime();
         float dt = static_cast<float>(now - last_time);
@@ -142,7 +146,11 @@ int main(int argc, char** argv) {
 
         if (IScene* scene = scenes.ActiveScene()) {
             if (advance || step) {
-                scene->Update(update_dt);
+                FrameContext context;
+                context.dt = update_dt;
+                context.input = &input;
+                context.viewport_hovered = g_editor_ui.IsViewportHovered();
+                scene->Update(context);
             }
             scene->Render(*renderer);
         }

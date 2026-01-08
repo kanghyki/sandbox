@@ -19,12 +19,6 @@ class EditorUi {
   private:
     bool dock_built_ = false;
     bool request_layout_reset_ = false;
-    float projection_fov_ = 60.0f;
-    float light_color_[3] = {1.0f, 0.9f, 0.7f};
-    float light_intensity_ = 5.0f;
-    float transform_pos_[3] = {0.0f, 1.2f, 0.0f};
-    float transform_rot_[3] = {0.0f, 35.0f, 0.0f};
-    float transform_scale_[3] = {1.0f, 1.0f, 1.0f};
     float clear_color_[3] = {0.06f, 0.12f, 0.14f};
     bool physics_enabled_ = true;
     float gravity_ = -9.8f;
@@ -44,6 +38,7 @@ class EditorUi {
     bool show_viewport_config_ = true;
     bool show_physics_ = false;
     bool show_fly_camera_ = false;
+    bool request_show_scene_ = false;
     bool viewport_has_mouse_ = false;
     int viewport_mouse_x_ = 0;
     int viewport_mouse_y_ = 0;

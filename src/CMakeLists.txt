@@ -43,6 +43,7 @@ add_library(engine
   engine/core/IWindow.h
   engine/core/Logger.cpp
   engine/core/Logger.h
+  engine/scene/FrameContext.h
   engine/scene/IScene.h
   engine/scene/SceneManager.cpp
   engine/scene/SceneManager.h
@@ -67,8 +68,10 @@ endif()
 
 add_executable(sandbox
   app/main.cpp
-  app/scenes/DotProductScene.cpp
-  app/scenes/DotProductScene.h
+  app/scenes/Example2DScene.cpp
+  app/scenes/Example2DScene.h
+  app/scenes/Example3DScene.cpp
+  app/scenes/Example3DScene.h
 )
 
 target_link_libraries(sandbox PRIVATE engine)

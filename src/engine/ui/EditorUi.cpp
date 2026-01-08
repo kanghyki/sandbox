@@ -116,7 +116,12 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
                 request_layout_reset_ = true;
             }
             ImGui::Separator();
-            ImGui::MenuItem("Scene", nullptr, &show_scene_);
+            bool was_scene = show_scene_;
+            if (ImGui::MenuItem("Scene", nullptr, &show_scene_)) {
+                if (!was_scene && show_scene_) {
+                    request_show_scene_ = true;
+                }
+            }
             ImGui::MenuItem("Operations", nullptr, &show_operations_);
             ImGui::MenuItem("Node Properties", nullptr, &show_node_properties_);
             ImGui::MenuItem("Viewport", nullptr, &show_viewport_);
@@ -156,6 +161,11 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
     ImGui::End();
 
     if (show_scene_) {
+        if (request_show_scene_) {
+            ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_Always);
+            ImGui::SetNextWindowFocus();
+            request_show_scene_ = false;
+        }
         if (ImGui::Begin("Scene", &show_scene_)) {
             ImGui::Text("Scenes");
             ImGui::Separator();
@@ -171,6 +181,10 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
             }
             if (count == 0) {
                 ImGui::TextDisabled("No scenes loaded.");
+            }
+            if (IScene* active = scenes.ActiveScene()) {
+                ImGui::Separator();
+                active->DrawSceneGui();
             }
         }
         ImGui::End();
@@ -190,18 +204,10 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
 
     if (show_node_properties_) {
         if (ImGui::Begin("Node Properties", &show_node_properties_)) {
-            ImGui::Text("Spot 0");
-            if (ImGui::CollapsingHeader("Projection", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::SliderFloat("FOV", &projection_fov_, 25.0f, 120.0f);
-            }
-            if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::ColorEdit3("Color", light_color_);
-                ImGui::SliderFloat("Intensity", &light_intensity_, 0.0f, 10.0f);
-            }
-            if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::DragFloat3("Position", transform_pos_, 0.01f);
-                ImGui::DragFloat3("Rotation", transform_rot_, 0.5f);
-                ImGui::DragFloat3("Scale", transform_scale_, 0.01f);
+            if (IScene* active = scenes.ActiveScene()) {
+                active->DrawInspectorGui();
+            } else {
+                ImGui::TextDisabled("No active scene.");
             }
         }
         ImGui::End();
@@ -310,7 +316,6 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
         }
         ImGui::End();
     }
-
 }
 
 bool EditorUi::ConsumeStepRequested() {

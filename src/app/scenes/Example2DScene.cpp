@@ -1,8 +1,7 @@
-#include "app/scenes/DotProductScene.h"
+#include "app/scenes/Example2DScene.h"
 
 #include "engine/core/Color.h"
 
-#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -44,11 +43,11 @@ void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, Color color) 
 }
 } // namespace
 
-void DotProductScene::Update(float dt) { time_ += dt; }
+void Example2DScene::Update(const FrameContext& context) { time_ += context.dt; }
 
-void DotProductScene::Reset() { time_ = 0.0f; }
+void Example2DScene::Reset() { time_ = 0.0f; }
 
-void DotProductScene::Render(IRenderer& renderer) {
+void Example2DScene::Render(IRenderer& renderer) {
     int w = renderer.Width();
     int h = renderer.Height();
     if (w <= 0 || h <= 0) {
