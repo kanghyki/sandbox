@@ -1,7 +1,6 @@
 sandbox
-lib
+build
 obj
 *.o
-compile_commands.json
 .cache
 .DS_Store
