@@ -7,6 +7,8 @@ class IScene {
   public:
     virtual ~IScene() = default;
     virtual const char* Name() const = 0;
+    virtual void OnEnter() {}
+    virtual void OnExit() {}
     virtual void Reset() {}
     virtual void Update(const FrameContext& context) { (void)context; }
     virtual void Render(IRenderer& renderer) = 0;
