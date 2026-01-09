@@ -37,7 +37,6 @@ target_include_directories(imgui_lib PUBLIC
 target_link_libraries(imgui_lib PUBLIC glfw OpenGL::GL)
 
 add_library(engine
-  engine/core/Color.h
   engine/core/InputState.h
   engine/core/IRenderer.h
   engine/core/IWindow.h

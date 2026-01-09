@@ -1,5 +1,4 @@
 #include "app/scenes/SceneRegistry.h"
-#include "engine/core/Color.h"
 #include "engine/core/IRenderer.h"
 #include "engine/core/IWindow.h"
 #include "engine/core/Logger.h"
@@ -90,17 +89,7 @@ int main(int argc, char** argv) {
         }
 
         const float* clear_color = g_editor_ui.ClearColor();
-        auto to_byte = [](float v) -> uint8_t {
-            if (v < 0.0f) {
-                return 0;
-            }
-            if (v > 1.0f) {
-                return 255;
-            }
-            return static_cast<uint8_t>(v * 255.0f);
-        };
-        renderer->Clear(ColorRGBA(to_byte(clear_color[0]), to_byte(clear_color[1]),
-                                  to_byte(clear_color[2]), to_byte(clear_color[3])));
+        renderer->Clear(sgm::vec4{clear_color[0], clear_color[1], clear_color[2], clear_color[3]});
 
         double now = glfwGetTime();
         float dt = static_cast<float>(now - last_time);
@@ -150,8 +139,9 @@ int main(int argc, char** argv) {
         was_left_down = left_down;
 
         if (has_viewport_mouse) {
-            Color cursor_color =
-                left_down ? ColorRGBA(64, 200, 120, 255) : ColorRGBA(240, 120, 120, 255);
+            sgm::vec4 cursor_color =
+                left_down ? sgm::vec4{64.0f / 255.0f, 200.0f / 255.0f, 120.0f / 255.0f, 1.0f}
+                          : sgm::vec4{240.0f / 255.0f, 120.0f / 255.0f, 120.0f / 255.0f, 1.0f};
 
             for (int dy = -2; dy <= 2; ++dy) {
                 for (int dx = -2; dx <= 2; ++dx) {

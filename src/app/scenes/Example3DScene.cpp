@@ -1,46 +1,14 @@
 #include "app/scenes/Example3DScene.h"
 
-#include "engine/core/Color.h"
+#include "engine/math/sgm/public/sgm.h"
 
 #include <GLFW/glfw3.h>
+#include <algorithm>
 #include <cmath>
 #include <imgui.h>
 
 namespace {
-struct Vec3 {
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
-};
-
-struct Vec2 {
-    float x = 0.0f;
-    float y = 0.0f;
-};
-
-Vec3 Add(const Vec3& a, const Vec3& b) { return Vec3{a.x + b.x, a.y + b.y, a.z + b.z}; }
-
-Vec3 Sub(const Vec3& a, const Vec3& b) { return Vec3{a.x - b.x, a.y - b.y, a.z - b.z}; }
-
-Vec3 Scale(const Vec3& v, float s) { return Vec3{v.x * s, v.y * s, v.z * s}; }
-
-float Dot(const Vec3& a, const Vec3& b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-
-Vec3 Cross(const Vec3& a, const Vec3& b) {
-    return Vec3{a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
-}
-
-float Length(const Vec3& v) { return std::sqrt(Dot(v, v)); }
-
-Vec3 Normalize(const Vec3& v) {
-    float len = Length(v);
-    if (len <= 0.0f) {
-        return v;
-    }
-    return Scale(v, 1.0f / len);
-}
-
-Vec3 RotateYawPitchRoll(const Vec3& v, float yaw, float pitch, float roll) {
+sgm::vec3 RotateYawPitchRoll(const sgm::vec3& v, float yaw, float pitch, float roll) {
     float cy = std::cos(yaw);
     float sy = std::sin(yaw);
     float cx = std::cos(pitch);
@@ -48,13 +16,13 @@ Vec3 RotateYawPitchRoll(const Vec3& v, float yaw, float pitch, float roll) {
     float cz = std::cos(roll);
     float sz = std::sin(roll);
 
-    Vec3 vy{cy * v.x + sy * v.z, v.y, -sy * v.x + cy * v.z};
-    Vec3 vp{vy.x, cx * vy.y - sx * vy.z, sx * vy.y + cx * vy.z};
-    Vec3 vr{cz * vp.x - sz * vp.y, sz * vp.x + cz * vp.y, vp.z};
+    sgm::vec3 vy{cy * v.x + sy * v.z, v.y, -sy * v.x + cy * v.z};
+    sgm::vec3 vp{vy.x, cx * vy.y - sx * vy.z, sx * vy.y + cx * vy.z};
+    sgm::vec3 vr{cz * vp.x - sz * vp.y, sz * vp.x + cz * vp.y, vp.z};
     return vr;
 }
 
-void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, Color color) {
+void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, const sgm::vec4& color) {
     int dx = std::abs(x1 - x0);
     int dy = std::abs(y1 - y0);
     int sx = (x0 < x1) ? 1 : -1;
@@ -80,10 +48,11 @@ void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, Color color) 
     }
 }
 
-bool ProjectPoint(const Vec3& world, const Vec3& cam_pos, float yaw, float pitch, float fov_rad,
-                  float aspect, float near_plane, int width, int height, Vec2* out) {
-    Vec3 rel = Sub(world, cam_pos);
-    Vec3 view = RotateYawPitchRoll(rel, -yaw, -pitch, 0.0f);
+bool ProjectPoint(const sgm::vec3& world, const sgm::vec3& cam_pos, float yaw, float pitch,
+                  float fov_rad, float aspect, float near_plane, int width, int height,
+                  sgm::vec2* out) {
+    sgm::vec3 rel = world - cam_pos;
+    sgm::vec3 view = RotateYawPitchRoll(rel, -yaw, -pitch, 0.0f);
     if (view.z <= near_plane) {
         return false;
     }
@@ -165,33 +134,34 @@ void Example3DScene::Update(const FrameContext& context) {
 
     float yaw = camera.rotation[1];
     float pitch = camera.rotation[0];
-    Vec3 forward{std::cos(pitch) * std::sin(yaw), std::sin(pitch), std::cos(pitch) * std::cos(yaw)};
-    Vec3 right{std::cos(yaw), 0.0f, -std::sin(yaw)};
-    Vec3 up{0.0f, 1.0f, 0.0f};
+    sgm::vec3 forward{std::cos(pitch) * std::sin(yaw), std::sin(pitch),
+                      std::cos(pitch) * std::cos(yaw)};
+    sgm::vec3 right{std::cos(yaw), 0.0f, -std::sin(yaw)};
+    sgm::vec3 up{0.0f, 1.0f, 0.0f};
 
-    Vec3 move{};
+    sgm::vec3 move{};
     if (input.IsKeyDown(GLFW_KEY_W)) {
-        move = Add(move, forward);
+        move = move + forward;
     }
     if (input.IsKeyDown(GLFW_KEY_S)) {
-        move = Sub(move, forward);
+        move = move - forward;
     }
     if (input.IsKeyDown(GLFW_KEY_D)) {
-        move = Add(move, right);
+        move = move + right;
     }
     if (input.IsKeyDown(GLFW_KEY_A)) {
-        move = Sub(move, right);
+        move = move - right;
     }
     if (input.IsKeyDown(GLFW_KEY_E)) {
-        move = Add(move, up);
+        move = move + up;
     }
     if (input.IsKeyDown(GLFW_KEY_Q)) {
-        move = Sub(move, up);
+        move = move - up;
     }
 
-    if (Length(move) > 0.0f) {
-        move = Normalize(move);
-        move = Scale(move, speed * context.dt);
+    if (sgm::length(move) > 0.0f) {
+        move = sgm::normalize(move);
+        move = move * (speed * context.dt);
         camera.position[0] += move.x;
         camera.position[1] += move.y;
         camera.position[2] += move.z;
@@ -217,13 +187,13 @@ void Example3DScene::Render(IRenderer& renderer) {
     }
 
     const Node& camera = nodes_[0];
-    Vec3 cam_pos{camera.position[0], camera.position[1], camera.position[2]};
+    sgm::vec3 cam_pos{camera.position[0], camera.position[1], camera.position[2]};
     float yaw = camera.rotation[1];
     float pitch = camera.rotation[0];
     float fov_rad = fov_degrees_ * 3.1415926f / 180.0f;
     float aspect = static_cast<float>(w) / static_cast<float>(h);
 
-    const Vec3 cube_vertices[] = {
+    const sgm::vec3 cube_vertices[] = {
         {-0.5f, -0.5f, -0.5f}, {0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, -0.5f},
         {-0.5f, -0.5f, 0.5f},  {0.5f, -0.5f, 0.5f},  {0.5f, 0.5f, 0.5f},  {-0.5f, 0.5f, 0.5f},
     };
@@ -231,7 +201,7 @@ void Example3DScene::Render(IRenderer& renderer) {
         {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},
         {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7},
     };
-    const Vec3 pyramid_vertices[] = {
+    const sgm::vec3 pyramid_vertices[] = {
         {-0.6f, -0.5f, -0.6f}, {0.6f, -0.5f, -0.6f}, {0.6f, -0.5f, 0.6f},
         {-0.6f, -0.5f, 0.6f},  {0.0f, 0.6f, 0.0f},
     };
@@ -241,19 +211,19 @@ void Example3DScene::Render(IRenderer& renderer) {
 
     for (size_t n = 1; n < nodes_.size(); ++n) {
         const Node& node = nodes_[n];
-        Vec3 pos{node.position[0], node.position[1], node.position[2]};
-        Vec3 rot{node.rotation[0], node.rotation[1], node.rotation[2]};
-        Vec3 scale{node.scale[0], node.scale[1], node.scale[2]};
-        Color edge_color = ColorRGBA(120, 200, 190, 255);
+        sgm::vec3 pos{node.position[0], node.position[1], node.position[2]};
+        sgm::vec3 rot{node.rotation[0], node.rotation[1], node.rotation[2]};
+        sgm::vec3 scale{node.scale[0], node.scale[1], node.scale[2]};
+        sgm::vec4 edge_color{120.0f / 255.0f, 200.0f / 255.0f, 190.0f / 255.0f, 1.0f};
 
         if (node.shape == Node::Shape::Cube) {
-            Vec2 projected[8];
+            sgm::vec2 projected[8];
             bool visible[8];
             for (int i = 0; i < 8; ++i) {
-                Vec3 local = {cube_vertices[i].x * scale.x, cube_vertices[i].y * scale.y,
-                              cube_vertices[i].z * scale.z};
-                Vec3 world = RotateYawPitchRoll(local, rot.y, rot.x, rot.z);
-                world = Add(world, pos);
+                sgm::vec3 local = {cube_vertices[i].x * scale.x, cube_vertices[i].y * scale.y,
+                                   cube_vertices[i].z * scale.z};
+                sgm::vec3 world = RotateYawPitchRoll(local, rot.y, rot.x, rot.z);
+                world = world + pos;
                 visible[i] = ProjectPoint(world, cam_pos, yaw, pitch, fov_rad, aspect, near_plane_,
                                           w, h, &projected[i]);
             }
@@ -268,13 +238,13 @@ void Example3DScene::Render(IRenderer& renderer) {
                          static_cast<int>(projected[b].y), edge_color);
             }
         } else {
-            Vec2 projected[5];
+            sgm::vec2 projected[5];
             bool visible[5];
             for (int i = 0; i < 5; ++i) {
-                Vec3 local = {pyramid_vertices[i].x * scale.x, pyramid_vertices[i].y * scale.y,
-                              pyramid_vertices[i].z * scale.z};
-                Vec3 world = RotateYawPitchRoll(local, rot.y, rot.x, rot.z);
-                world = Add(world, pos);
+                sgm::vec3 local = {pyramid_vertices[i].x * scale.x, pyramid_vertices[i].y * scale.y,
+                                   pyramid_vertices[i].z * scale.z};
+                sgm::vec3 world = RotateYawPitchRoll(local, rot.y, rot.x, rot.z);
+                world = world + pos;
                 visible[i] = ProjectPoint(world, cam_pos, yaw, pitch, fov_rad, aspect, near_plane_,
                                           w, h, &projected[i]);
             }

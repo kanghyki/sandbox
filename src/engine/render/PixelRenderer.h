@@ -7,8 +7,8 @@ class PixelRenderer : public IRenderer {
     PixelRenderer(int width, int height);
 
     void Resize(int width, int height) override;
-    void Clear(Color color) override;
-    void PutPixel(int x, int y, Color color) override;
+    void Clear(const sgm::vec4& color) override;
+    void PutPixel(int x, int y, const sgm::vec4& color) override;
 
     int Width() const override { return width_; }
     int Height() const override { return height_; }

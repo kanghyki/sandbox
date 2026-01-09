@@ -1,22 +1,11 @@
 #include "app/scenes/Example2DScene.h"
 
-#include "engine/core/Color.h"
+#include "engine/math/sgm/public/sgm.h"
 
 #include <cmath>
 
 namespace {
-struct Vec2 {
-    float x = 0.0f;
-    float y = 0.0f;
-};
-
-Vec2 Add(const Vec2& a, const Vec2& b) { return Vec2{a.x + b.x, a.y + b.y}; }
-
-Vec2 Scale(const Vec2& v, float s) { return Vec2{v.x * s, v.y * s}; }
-
-float Dot(const Vec2& a, const Vec2& b) { return a.x * b.x + a.y * b.y; }
-
-void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, Color color) {
+void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, const sgm::vec4& color) {
     int dx = std::abs(x1 - x0);
     int dy = std::abs(y1 - y0);
     int sx = (x0 < x1) ? 1 : -1;
@@ -55,32 +44,35 @@ void Example2DScene::Render(IRenderer& renderer) {
     }
 
     float radius = 0.35f * static_cast<float>(std::min(w, h));
-    Vec2 center{w * 0.5f, h * 0.5f};
+    sgm::vec2 center{w * 0.5f, h * 0.5f};
 
     float a_angle = 0.35f;
     float b_angle = time_ * 0.7f;
 
-    Vec2 a{std::cos(a_angle) * radius, std::sin(a_angle) * radius};
-    Vec2 b{std::cos(b_angle) * radius, std::sin(b_angle) * radius};
+    sgm::vec2 a{std::cos(a_angle) * radius, std::sin(a_angle) * radius};
+    sgm::vec2 b{std::cos(b_angle) * radius, std::sin(b_angle) * radius};
 
-    float a_len2 = Dot(a, a);
-    float proj_scale = (a_len2 > 0.0f) ? Dot(a, b) / a_len2 : 0.0f;
-    Vec2 proj = Scale(a, proj_scale);
+    float a_len2 = sgm::dot(a, a);
+    float proj_scale = (a_len2 > 0.0f) ? sgm::dot(a, b) / a_len2 : 0.0f;
+    sgm::vec2 proj = a * proj_scale;
 
-    Vec2 a_tip = Add(center, a);
-    Vec2 b_tip = Add(center, b);
-    Vec2 p_tip = Add(center, proj);
+    sgm::vec2 a_tip = center + a;
+    sgm::vec2 b_tip = center + b;
+    sgm::vec2 p_tip = center + proj;
 
-    Color axis = ColorRGBA(80, 90, 110, 255);
+    sgm::vec4 axis{80.0f / 255.0f, 90.0f / 255.0f, 110.0f / 255.0f, 1.0f};
     DrawLine(renderer, 0, static_cast<int>(center.y), w - 1, static_cast<int>(center.y), axis);
     DrawLine(renderer, static_cast<int>(center.x), 0, static_cast<int>(center.x), h - 1, axis);
 
     DrawLine(renderer, static_cast<int>(center.x), static_cast<int>(center.y),
-             static_cast<int>(a_tip.x), static_cast<int>(a_tip.y), ColorRGBA(255, 180, 80, 255));
+             static_cast<int>(a_tip.x), static_cast<int>(a_tip.y),
+             sgm::vec4{1.0f, 180.0f / 255.0f, 80.0f / 255.0f, 1.0f});
 
     DrawLine(renderer, static_cast<int>(center.x), static_cast<int>(center.y),
-             static_cast<int>(b_tip.x), static_cast<int>(b_tip.y), ColorRGBA(80, 200, 190, 255));
+             static_cast<int>(b_tip.x), static_cast<int>(b_tip.y),
+             sgm::vec4{80.0f / 255.0f, 200.0f / 255.0f, 190.0f / 255.0f, 1.0f});
 
     DrawLine(renderer, static_cast<int>(center.x), static_cast<int>(center.y),
-             static_cast<int>(p_tip.x), static_cast<int>(p_tip.y), ColorRGBA(220, 220, 220, 255));
+             static_cast<int>(p_tip.x), static_cast<int>(p_tip.y),
+             sgm::vec4{220.0f / 255.0f, 220.0f / 255.0f, 220.0f / 255.0f, 1.0f});
 }
