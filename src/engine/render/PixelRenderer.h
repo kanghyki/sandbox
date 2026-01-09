@@ -26,6 +26,10 @@ class PixelRenderer : public IRenderer {
         uint8_t g = 0;
         uint8_t b = 0;
         uint8_t a = 255;
+
+        bool operator==(const Pixel& other) const {
+            return r == other.r && g == other.g && b == other.b && a == other.a;
+        }
     };
 
     static Pixel ColorToPixel(const Color4f& color);
@@ -34,4 +38,7 @@ class PixelRenderer : public IRenderer {
     int height_ = 0;
 
     std::vector<Pixel> pixels_;
+    std::vector<Pixel> clear_row_;
+    Pixel clear_row_pixel_{};
+    bool clear_row_valid_ = false;
 };

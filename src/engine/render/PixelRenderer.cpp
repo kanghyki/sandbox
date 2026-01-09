@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstring>
 
 namespace {
 constexpr size_t kLutSize = 4096;
@@ -37,11 +38,27 @@ void PixelRenderer::Resize(int width, int height) {
     width_ = std::max(0, width);
     height_ = std::max(0, height);
     pixels_.assign(static_cast<size_t>(width_ * height_), Pixel{});
+    clear_row_.clear();
+    clear_row_valid_ = false;
 }
 
 void PixelRenderer::Clear(const Color4f& color) {
     Pixel rgba = ColorToPixel(color);
-    std::fill(pixels_.begin(), pixels_.end(), rgba);
+    if (!clear_row_valid_ || !(clear_row_pixel_ == rgba) ||
+        clear_row_.size() != static_cast<size_t>(width_)) {
+        clear_row_.assign(static_cast<size_t>(width_), rgba);
+        clear_row_pixel_ = rgba;
+        clear_row_valid_ = true;
+    }
+    if (width_ <= 0 || height_ <= 0) {
+        return;
+    }
+    Pixel* dst = pixels_.data();
+    const size_t row_bytes = static_cast<size_t>(width_) * sizeof(Pixel);
+    for (int y = 0; y < height_; ++y) {
+        std::memcpy(dst, clear_row_.data(), row_bytes);
+        dst += width_;
+    }
 }
 
 void PixelRenderer::PutPixel(int x, int y, const Color4f& color) {
