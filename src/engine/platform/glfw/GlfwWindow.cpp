@@ -30,13 +30,13 @@ GlfwWindow::GlfwWindow(int width, int height, const char* title) {
         return;
     }
 
-    glfwMaximizeWindow(window_);
     windowed_w_ = init_w;
     windowed_h_ = init_h;
     glfwGetWindowPos(window_, &windowed_x_, &windowed_y_);
     glfwGetWindowSize(window_, &windowed_w_, &windowed_h_);
 
     glfwMakeContextCurrent(window_);
+    vsync_enabled_ = true;
     glfwSwapInterval(1);
 
     glfwSetWindowUserPointer(window_, this);
@@ -85,6 +85,11 @@ void GlfwWindow::SetFullscreen(bool enabled) {
                              0);
         is_fullscreen_ = false;
     }
+}
+
+void GlfwWindow::SetVsync(bool enabled) {
+    vsync_enabled_ = enabled;
+    glfwSwapInterval(enabled ? 1 : 0);
 }
 
 void GlfwWindow::PollEvents() { glfwPollEvents(); }

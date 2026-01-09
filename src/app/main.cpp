@@ -19,40 +19,13 @@
 
 namespace {
 EditorUi g_editor_ui{};
-
-void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, Color color) {
-    int dx = std::abs(x1 - x0);
-    int dy = std::abs(y1 - y0);
-    int sx = (x0 < x1) ? 1 : -1;
-    int sy = (y0 < y1) ? 1 : -1;
-    int err = dx - dy;
-
-    int x = x0;
-    int y = y0;
-    while (true) {
-        renderer.PutPixel(x, y, color);
-        if (x == x1 && y == y1) {
-            break;
-        }
-        int e2 = 2 * err;
-        if (e2 > -dy) {
-            err -= dy;
-            x += sx;
-        }
-        if (e2 < dx) {
-            err += dx;
-            y += sy;
-        }
-    }
-}
-
 } // namespace
 
 int main(int argc, char** argv) {
     (void)argc;
     (void)argv;
 
-    std::unique_ptr<IWindow> window = std::make_unique<GlfwWindow>(800, 600, "Sandbox");
+    std::unique_ptr<IWindow> window = std::make_unique<GlfwWindow>(960, 600, "Sandbox");
     if (!window->IsValid()) {
         Logger::Error("Failed to create GLFW window.");
         return 1;
@@ -101,9 +74,19 @@ int main(int argc, char** argv) {
             renderer->Resize(fb_width, fb_height);
         }
 
+        int win_width = 0;
+        int win_height = 0;
+        if (GLFWwindow* raw = static_cast<GLFWwindow*>(window->NativeHandle())) {
+            glfwGetWindowSize(raw, &win_width, &win_height);
+        }
+
         const InputState& input = window->Input();
         if (input.IsKeyDown(GLFW_KEY_ESCAPE)) {
             window->SetShouldClose(true);
+        }
+
+        if (window->IsVsync() != g_editor_ui.VsyncEnabled()) {
+            window->SetVsync(g_editor_ui.VsyncEnabled());
         }
 
         const float* clear_color = g_editor_ui.ClearColor();
@@ -117,7 +100,7 @@ int main(int argc, char** argv) {
             return static_cast<uint8_t>(v * 255.0f);
         };
         renderer->Clear(ColorRGBA(to_byte(clear_color[0]), to_byte(clear_color[1]),
-                                  to_byte(clear_color[2]), 255));
+                                  to_byte(clear_color[2]), to_byte(clear_color[3])));
 
         double now = glfwGetTime();
         float dt = static_cast<float>(now - last_time);
@@ -179,11 +162,12 @@ int main(int argc, char** argv) {
 
         presenter.Upload(*renderer);
 
-        glClearColor(clear_color[0], clear_color[1], clear_color[2], 1.0f);
+        glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
         glClear(GL_COLOR_BUFFER_BIT);
 
         imgui.BeginFrame();
-        g_editor_ui.Draw(presenter.TextureId(), renderer->Width(), renderer->Height(), scenes);
+        g_editor_ui.Draw(presenter.TextureId(), renderer->Width(), renderer->Height(), win_width,
+                         win_height, scenes);
         imgui.EndFrame();
 
         window->SwapBuffers();

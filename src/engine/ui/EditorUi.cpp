@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
 #include <fstream>
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -47,7 +48,8 @@ void BuildDefaultDockLayout(ImGuiID dockspace_id) {
 }
 } // namespace
 
-void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneManager& scenes) {
+void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, int win_width,
+                    int win_height, SceneManager& scenes) {
     const ImGuiDockNodeFlags dock_flags = ImGuiDockNodeFlags_PassthruCentralNode;
     viewport_has_mouse_ = false;
 
@@ -178,6 +180,29 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
             ImVec2 image_pos = ImGui::GetCursorScreenPos();
             DrawViewportImage(texture_id);
 
+            if (show_fps_overlay_) {
+                ImGuiIO& io = ImGui::GetIO();
+                float fps = io.Framerate;
+                char text[64] = {};
+                std::snprintf(text, sizeof(text), "%.1f FPS", fps);
+
+                ImVec2 pad(6.0f, 4.0f);
+                ImVec2 text_size = ImGui::CalcTextSize(text);
+                ImVec2 pos(image_pos.x + avail.x - text_size.x - pad.x * 2.0f - 8.0f,
+                           image_pos.y + 8.0f);
+                ImGui::SetCursorScreenPos(pos);
+                ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.11f, 0.14f, 0.85f));
+                ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+                ImGui::BeginChild("##fps_overlay",
+                                  ImVec2(text_size.x + pad.x * 2.0f, text_size.y + pad.y * 2.0f),
+                                  false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav);
+                ImGui::SetCursorPos(pad);
+                ImGui::TextUnformatted(text);
+                ImGui::EndChild();
+                ImGui::PopStyleVar();
+                ImGui::PopStyleColor();
+            }
+
             ImGuiIO& io = ImGui::GetIO();
             ImVec2 mouse = io.MousePos;
             bool inside = mouse.x >= image_pos.x && mouse.y >= image_pos.y &&
@@ -229,7 +254,15 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, SceneM
     if (show_viewport_config_) {
         if (ImGui::Begin("Viewport Config", &show_viewport_config_)) {
             ImGui::Text("Clear Color");
-            ImGui::ColorEdit3("##clear", clear_color_);
+            ImGui::ColorEdit4("##clear", clear_color_, ImGuiColorEditFlags_AlphaBar);
+            ImGui::Checkbox("VSync", &vsync_enabled_);
+            ImGui::Checkbox("FPS Overlay", &show_fps_overlay_);
+            ImGui::Separator();
+            ImGui::Text("Window: %d x %d", win_width, win_height);
+            ImGui::Text("Framebuffer: %d x %d", fb_width, fb_height);
+            float scale_x = win_width > 0 ? static_cast<float>(fb_width) / win_width : 0.0f;
+            float scale_y = win_height > 0 ? static_cast<float>(fb_height) / win_height : 0.0f;
+            ImGui::Text("DPI Scale: %.2f x %.2f", scale_x, scale_y);
         }
         ImGui::End();
     }

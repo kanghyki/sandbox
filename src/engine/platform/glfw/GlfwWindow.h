@@ -14,6 +14,8 @@ class GlfwWindow : public IWindow {
     void SetShouldClose(bool value) override;
     void SetFullscreen(bool enabled) override;
     bool IsFullscreen() const override { return is_fullscreen_; }
+    void SetVsync(bool enabled) override;
+    bool IsVsync() const override { return vsync_enabled_; }
     void PollEvents() override;
     void SwapBuffers() override;
     void GetFramebufferSize(int* width, int* height) const override;
@@ -34,4 +36,5 @@ class GlfwWindow : public IWindow {
     int windowed_y_ = 0;
     int windowed_w_ = 800;
     int windowed_h_ = 600;
+    bool vsync_enabled_ = true;
 };

@@ -11,6 +11,8 @@ class IWindow {
     virtual void SetShouldClose(bool value) = 0;
     virtual void SetFullscreen(bool enabled) = 0;
     virtual bool IsFullscreen() const = 0;
+    virtual void SetVsync(bool enabled) = 0;
+    virtual bool IsVsync() const = 0;
     virtual void PollEvents() = 0;
     virtual void SwapBuffers() = 0;
     virtual void GetFramebufferSize(int* width, int* height) const = 0;
