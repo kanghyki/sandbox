@@ -11,13 +11,36 @@
 #include <imgui_internal.h>
 
 namespace {
-void DrawViewportImage(unsigned int texture_id) {
+void DrawViewportImage(unsigned int texture_id, int fb_width, int fb_height, ImVec2* out_pos,
+                       ImVec2* out_size) {
     ImVec2 size = ImGui::GetContentRegionAvail();
     if (size.x <= 0.0f || size.y <= 0.0f) {
         return;
     }
-    ImGui::Image(reinterpret_cast<void*>(static_cast<intptr_t>(texture_id)), size, ImVec2(0, 1),
-                 ImVec2(1, 0));
+    float scale_x = (fb_width > 0) ? (size.x / static_cast<float>(fb_width)) : 1.0f;
+    float scale_y = (fb_height > 0) ? (size.y / static_cast<float>(fb_height)) : 1.0f;
+    float scale = std::min(scale_x, scale_y);
+    ImVec2 image_size(static_cast<float>(fb_width) * scale, static_cast<float>(fb_height) * scale);
+
+    ImVec2 cursor = ImGui::GetCursorPos();
+    ImVec2 region = ImGui::GetContentRegionAvail();
+    ImVec2 padding((region.x - image_size.x) * 0.5f, (region.y - image_size.y) * 0.5f);
+    if (padding.x < 0.0f) {
+        padding.x = 0.0f;
+    }
+    if (padding.y < 0.0f) {
+        padding.y = 0.0f;
+    }
+    ImGui::SetCursorPos(ImVec2(cursor.x + padding.x, cursor.y + padding.y));
+    ImVec2 image_pos = ImGui::GetCursorScreenPos();
+    ImGui::Image(reinterpret_cast<void*>(static_cast<intptr_t>(texture_id)), image_size,
+                 ImVec2(0, 1), ImVec2(1, 0));
+    if (out_pos) {
+        *out_pos = image_pos;
+    }
+    if (out_size) {
+        *out_size = image_size;
+    }
 }
 
 void BuildDefaultDockLayout(ImGuiID dockspace_id) {
@@ -42,7 +65,7 @@ void BuildDefaultDockLayout(ImGuiID dockspace_id) {
     ImGui::DockBuilderDockWindow("Node Properties", dock_left_top);
     ImGui::DockBuilderDockWindow("Scene for Camera A", dock_main);
     ImGui::DockBuilderDockWindow("Log", dock_bottom);
-    ImGui::DockBuilderDockWindow("Viewport Config", dock_bottom_right);
+    ImGui::DockBuilderDockWindow("Render Settings", dock_bottom_right);
 
     ImGui::DockBuilderFinish(dockspace_id);
 }
@@ -177,8 +200,9 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, int wi
     if (show_viewport_) {
         if (ImGui::Begin("Scene for Camera A", &show_viewport_)) {
             ImVec2 avail = ImGui::GetContentRegionAvail();
-            ImVec2 image_pos = ImGui::GetCursorScreenPos();
-            DrawViewportImage(texture_id);
+            ImVec2 image_pos{};
+            ImVec2 image_size{};
+            DrawViewportImage(texture_id, fb_width, fb_height, &image_pos, &image_size);
 
             if (show_fps_overlay_) {
                 ImGuiIO& io = ImGui::GetIO();
@@ -188,7 +212,7 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, int wi
 
                 ImVec2 pad(6.0f, 4.0f);
                 ImVec2 text_size = ImGui::CalcTextSize(text);
-                ImVec2 pos(image_pos.x + avail.x - text_size.x - pad.x * 2.0f - 8.0f,
+                ImVec2 pos(image_pos.x + image_size.x - text_size.x - pad.x * 2.0f - 8.0f,
                            image_pos.y + 8.0f);
                 ImGui::SetCursorScreenPos(pos);
                 ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.11f, 0.14f, 0.85f));
@@ -206,12 +230,14 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, int wi
             ImGuiIO& io = ImGui::GetIO();
             ImVec2 mouse = io.MousePos;
             bool inside = mouse.x >= image_pos.x && mouse.y >= image_pos.y &&
-                          mouse.x <= image_pos.x + avail.x && mouse.y <= image_pos.y + avail.y;
-            if (inside && avail.x > 0.0f && avail.y > 0.0f && fb_width > 0 && fb_height > 0) {
+                          mouse.x <= image_pos.x + image_size.x &&
+                          mouse.y <= image_pos.y + image_size.y;
+            if (inside && image_size.x > 0.0f && image_size.y > 0.0f && fb_width > 0 &&
+                fb_height > 0) {
                 float local_x = mouse.x - image_pos.x;
                 float local_y = mouse.y - image_pos.y;
-                int px = static_cast<int>((local_x / avail.x) * fb_width);
-                int py = static_cast<int>((local_y / avail.y) * fb_height);
+                int px = static_cast<int>((local_x / image_size.x) * fb_width);
+                int py = static_cast<int>((local_y / image_size.y) * fb_height);
                 px = std::clamp(px, 0, fb_width - 1);
                 py = std::clamp(py, 0, fb_height - 1);
                 viewport_has_mouse_ = true;
@@ -252,17 +278,61 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, int wi
     }
 
     if (show_viewport_config_) {
-        if (ImGui::Begin("Viewport Config", &show_viewport_config_)) {
-            ImGui::Text("Clear Color");
-            ImGui::ColorEdit4("##clear", clear_color_, ImGuiColorEditFlags_AlphaBar);
-            ImGui::Checkbox("VSync", &vsync_enabled_);
-            ImGui::Checkbox("FPS Overlay", &show_fps_overlay_);
+        if (ImGui::Begin("Render Settings", &show_viewport_config_)) {
+            ImGui::Text("Render Target");
+            const char* presets[] = {"960x540", "1280x720", "1600x900", "1920x1080",
+                                     "2560x1440", "Custom"};
+            const int preset_count = static_cast<int>(sizeof(presets) / sizeof(presets[0]));
+            if (ImGui::Combo("Preset", &viewport_resolution_index_, presets, preset_count)) {
+                switch (viewport_resolution_index_) {
+                case 0:
+                    viewport_target_width_ = 960;
+                    viewport_target_height_ = 540;
+                    break;
+                case 1:
+                    viewport_target_width_ = 1280;
+                    viewport_target_height_ = 720;
+                    break;
+                case 2:
+                    viewport_target_width_ = 1600;
+                    viewport_target_height_ = 900;
+                    break;
+                case 3:
+                    viewport_target_width_ = 1920;
+                    viewport_target_height_ = 1080;
+                    break;
+                case 4:
+                    viewport_target_width_ = 2560;
+                    viewport_target_height_ = 1440;
+                    break;
+                default:
+                    break;
+                }
+            }
+            const bool is_custom = viewport_resolution_index_ == preset_count - 1;
+            if (is_custom) {
+                ImGui::PushItemWidth(120.0f);
+                ImGui::InputInt("W", &viewport_target_width_);
+                ImGui::SameLine();
+                ImGui::InputInt("H", &viewport_target_height_);
+                ImGui::PopItemWidth();
+            }
+            viewport_target_width_ = std::max(1, viewport_target_width_);
+            viewport_target_height_ = std::max(1, viewport_target_height_);
+            ImGui::Text("Active: %d x %d", viewport_target_width_, viewport_target_height_);
             ImGui::Separator();
+
             ImGui::Text("Window: %d x %d", win_width, win_height);
             ImGui::Text("Framebuffer: %d x %d", fb_width, fb_height);
             float scale_x = win_width > 0 ? static_cast<float>(fb_width) / win_width : 0.0f;
             float scale_y = win_height > 0 ? static_cast<float>(fb_height) / win_height : 0.0f;
             ImGui::Text("DPI Scale: %.2f x %.2f", scale_x, scale_y);
+            ImGui::ColorEdit4("##clear", clear_color_, ImGuiColorEditFlags_AlphaBar);
+            ImGui::Checkbox("FPS Overlay", &show_fps_overlay_);
+            ImGui::Separator();
+
+            ImGui::Text("System");
+            ImGui::Checkbox("VSync", &vsync_enabled_);
         }
         ImGui::End();
     }

@@ -35,6 +35,7 @@ int main(int argc, char** argv) {
     if (!glfw_window) {
         return 1;
     }
+    glfwMaximizeWindow(glfw_window);
 
     int fb_width = 0;
     int fb_height = 0;
@@ -70,8 +71,10 @@ int main(int argc, char** argv) {
             continue;
         }
 
-        if (fb_width != renderer->Width() || fb_height != renderer->Height()) {
-            renderer->Resize(fb_width, fb_height);
+        int desired_width = g_editor_ui.ViewportTargetWidth();
+        int desired_height = g_editor_ui.ViewportTargetHeight();
+        if (desired_width != renderer->Width() || desired_height != renderer->Height()) {
+            renderer->Resize(desired_width, desired_height);
         }
 
         int win_width = 0;

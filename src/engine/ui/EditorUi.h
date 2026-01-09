@@ -13,6 +13,8 @@ class EditorUi {
     const float* ClearColor() const { return clear_color_; }
     bool GetViewportMousePixel(int* out_x, int* out_y) const;
     bool IsViewportHovered() const { return viewport_has_mouse_; }
+    int ViewportTargetWidth() const { return viewport_target_width_; }
+    int ViewportTargetHeight() const { return viewport_target_height_; }
     PlayState GetPlayState() const { return play_state_; }
     bool ConsumeStepRequested();
     bool ConsumeStopRequested();
@@ -37,4 +39,7 @@ class EditorUi {
     bool viewport_has_mouse_ = false;
     int viewport_mouse_x_ = 0;
     int viewport_mouse_y_ = 0;
+    int viewport_target_width_ = 960;
+    int viewport_target_height_ = 540;
+    int viewport_resolution_index_ = 5;
 };
