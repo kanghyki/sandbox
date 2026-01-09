@@ -1,4 +1,5 @@
 #include "app/scenes/SceneRegistry.h"
+#include "engine/core/Color4f.h"
 #include "engine/core/IRenderer.h"
 #include "engine/core/IWindow.h"
 #include "engine/core/Logger.h"
@@ -89,7 +90,7 @@ int main(int argc, char** argv) {
         }
 
         const float* clear_color = g_editor_ui.ClearColor();
-        renderer->Clear(sgm::vec4{clear_color[0], clear_color[1], clear_color[2], clear_color[3]});
+        renderer->Clear(Color4f{clear_color[0], clear_color[1], clear_color[2], clear_color[3]});
 
         double now = glfwGetTime();
         float dt = static_cast<float>(now - last_time);
@@ -139,9 +140,8 @@ int main(int argc, char** argv) {
         was_left_down = left_down;
 
         if (has_viewport_mouse) {
-            sgm::vec4 cursor_color =
-                left_down ? sgm::vec4{64.0f / 255.0f, 200.0f / 255.0f, 120.0f / 255.0f, 1.0f}
-                          : sgm::vec4{240.0f / 255.0f, 120.0f / 255.0f, 120.0f / 255.0f, 1.0f};
+            Color4f cursor_color = left_down ? Color4f::FromBytes(64, 200, 120, 255)
+                                             : Color4f::FromBytes(240, 120, 120, 255);
 
             for (int dy = -2; dy <= 2; ++dy) {
                 for (int dx = -2; dx <= 2; ++dx) {

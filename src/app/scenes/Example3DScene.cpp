@@ -1,5 +1,6 @@
 #include "app/scenes/Example3DScene.h"
 
+#include "engine/core/Color4f.h"
 #include "engine/math/sgm/public/sgm.h"
 
 #include <GLFW/glfw3.h>
@@ -22,7 +23,7 @@ sgm::vec3 RotateYawPitchRoll(const sgm::vec3& v, float yaw, float pitch, float r
     return vr;
 }
 
-void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, const sgm::vec4& color) {
+void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, const Color4f& color) {
     int dx = std::abs(x1 - x0);
     int dy = std::abs(y1 - y0);
     int sx = (x0 < x1) ? 1 : -1;
@@ -214,7 +215,7 @@ void Example3DScene::Render(IRenderer& renderer) {
         sgm::vec3 pos{node.position[0], node.position[1], node.position[2]};
         sgm::vec3 rot{node.rotation[0], node.rotation[1], node.rotation[2]};
         sgm::vec3 scale{node.scale[0], node.scale[1], node.scale[2]};
-        sgm::vec4 edge_color{120.0f / 255.0f, 200.0f / 255.0f, 190.0f / 255.0f, 1.0f};
+        Color4f edge_color = Color4f::FromBytes(120, 200, 190, 255);
 
         if (node.shape == Node::Shape::Cube) {
             sgm::vec2 projected[8];

@@ -1,11 +1,12 @@
 #include "app/scenes/Example2DScene.h"
 
+#include "engine/core/Color4f.h"
 #include "engine/math/sgm/public/sgm.h"
 
 #include <cmath>
 
 namespace {
-void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, const sgm::vec4& color) {
+void DrawLine(IRenderer& renderer, int x0, int y0, int x1, int y1, const Color4f& color) {
     int dx = std::abs(x1 - x0);
     int dy = std::abs(y1 - y0);
     int sx = (x0 < x1) ? 1 : -1;
@@ -60,19 +61,19 @@ void Example2DScene::Render(IRenderer& renderer) {
     sgm::vec2 b_tip = center + b;
     sgm::vec2 p_tip = center + proj;
 
-    sgm::vec4 axis{80.0f / 255.0f, 90.0f / 255.0f, 110.0f / 255.0f, 1.0f};
+    Color4f axis = Color4f::FromBytes(80, 90, 110, 255);
     DrawLine(renderer, 0, static_cast<int>(center.y), w - 1, static_cast<int>(center.y), axis);
     DrawLine(renderer, static_cast<int>(center.x), 0, static_cast<int>(center.x), h - 1, axis);
 
     DrawLine(renderer, static_cast<int>(center.x), static_cast<int>(center.y),
              static_cast<int>(a_tip.x), static_cast<int>(a_tip.y),
-             sgm::vec4{1.0f, 180.0f / 255.0f, 80.0f / 255.0f, 1.0f});
+             Color4f::FromBytes(255, 180, 80, 255));
 
     DrawLine(renderer, static_cast<int>(center.x), static_cast<int>(center.y),
              static_cast<int>(b_tip.x), static_cast<int>(b_tip.y),
-             sgm::vec4{80.0f / 255.0f, 200.0f / 255.0f, 190.0f / 255.0f, 1.0f});
+             Color4f::FromBytes(80, 200, 190, 255));
 
     DrawLine(renderer, static_cast<int>(center.x), static_cast<int>(center.y),
              static_cast<int>(p_tip.x), static_cast<int>(p_tip.y),
-             sgm::vec4{220.0f / 255.0f, 220.0f / 255.0f, 220.0f / 255.0f, 1.0f});
+             Color4f::FromBytes(220, 220, 220, 255));
 }

@@ -184,7 +184,7 @@ bool GlPresenter::Upload(const IRenderer& renderer) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture_);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, renderer.Width(), renderer.Height(), GL_RGBA,
-                    GL_UNSIGNED_BYTE, renderer.Pixels().data());
+                    GL_UNSIGNED_BYTE, renderer.Pixels());
     glBindTexture(GL_TEXTURE_2D, 0);
     return true;
 }

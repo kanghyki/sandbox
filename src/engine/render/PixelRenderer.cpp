@@ -25,43 +25,30 @@ uint8_t ToByteLut(float v) {
     size_t idx = static_cast<size_t>(scaled + 0.5f);
     return GetColorLut()[idx];
 }
-
-void Vec4ToColor(const sgm::vec4& color, uint8_t* out) {
-    out[0] = ToByteLut(color.r);
-    out[1] = ToByteLut(color.g);
-    out[2] = ToByteLut(color.b);
-    out[3] = ToByteLut(color.a);
-}
 } // namespace
 
 PixelRenderer::PixelRenderer(int width, int height) { Resize(width, height); }
 
+PixelRenderer::Pixel PixelRenderer::ColorToPixel(const Color4f& color) {
+    return Pixel{ToByteLut(color.r), ToByteLut(color.g), ToByteLut(color.b), ToByteLut(color.a)};
+}
+
 void PixelRenderer::Resize(int width, int height) {
     width_ = std::max(0, width);
     height_ = std::max(0, height);
-    pixels_.assign(static_cast<size_t>(width_ * height_ * 4), 0);
+    pixels_.assign(static_cast<size_t>(width_ * height_), Pixel{});
 }
 
-void PixelRenderer::Clear(const sgm::vec4& color) {
-    uint8_t rgba[4];
-    Vec4ToColor(color, rgba);
-    for (size_t i = 0; i + 3 < pixels_.size(); i += 4) {
-        pixels_[i] = rgba[0];
-        pixels_[i + 1] = rgba[1];
-        pixels_[i + 2] = rgba[2];
-        pixels_[i + 3] = rgba[3];
-    }
+void PixelRenderer::Clear(const Color4f& color) {
+    Pixel rgba = ColorToPixel(color);
+    std::fill(pixels_.begin(), pixels_.end(), rgba);
 }
 
-void PixelRenderer::PutPixel(int x, int y, const sgm::vec4& color) {
+void PixelRenderer::PutPixel(int x, int y, const Color4f& color) {
     if (x < 0 || y < 0 || x >= width_ || y >= height_) {
         return;
     }
-    uint8_t rgba[4];
-    Vec4ToColor(color, rgba);
-    size_t index = static_cast<size_t>((y * width_ + x) * 4);
-    pixels_[index] = rgba[0];
-    pixels_[index + 1] = rgba[1];
-    pixels_[index + 2] = rgba[2];
-    pixels_[index + 3] = rgba[3];
+    Pixel rgba = ColorToPixel(color);
+    size_t index = static_cast<size_t>(y * width_ + x);
+    pixels_[index] = rgba;
 }
