@@ -57,7 +57,7 @@ void HeartScene::Render(IRenderer& renderer) {
     }
 }
 
-void HeartScene::DrawSceneGui() { ImGui::Text(("Degree : " + std::to_string(normDeg_)).c_str()); }
+void HeartScene::DrawSceneGui() { ImGui::Text("Degree : %.2f", normDeg_); }
 
 void HeartScene::DrawInspectorGui() {
     ImGui::DragFloat2("Position", &position_.x);
