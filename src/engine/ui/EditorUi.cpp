@@ -280,8 +280,8 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, int wi
     if (show_viewport_config_) {
         if (ImGui::Begin("Render Settings", &show_viewport_config_)) {
             ImGui::Text("Render Target");
-            const char* presets[] = {"960x540", "1280x720", "1600x900", "1920x1080",
-                                     "2560x1440", "Custom"};
+            const char* presets[] = {"960x540",   "1280x720",  "1600x900",
+                                     "1920x1080", "2560x1440", "Custom"};
             const int preset_count = static_cast<int>(sizeof(presets) / sizeof(presets[0]));
             if (ImGui::Combo("Preset", &viewport_resolution_index_, presets, preset_count)) {
                 switch (viewport_resolution_index_) {

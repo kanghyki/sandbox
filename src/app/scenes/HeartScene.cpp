@@ -1,4 +1,5 @@
 #include "app/scenes/HeartScene.h"
+
 #include "engine/core/Logger.h"
 #include "trigonometry.h"
 
@@ -41,18 +42,27 @@ void HeartScene::Render(IRenderer& renderer) {
         isInitPosition_ = true;
     }
     float deg = 60.0f * time_;
-    float sin = (sinf(sgm::radians(deg)) + 1.0f) / 2.0f;
-    float scale = amplitude_ * sin + scale_;
+    normDeg_ = std::fmod(deg, 360.0f);
+    float normRadian = sgm::radians(normDeg_);
+    float range = (sinf(normRadian) + 1.0f) / 2.0f;
+    float scale = amplitude_ * range + scale_;
     for (auto const& v : hearts_) {
-        renderer.PutPixel(v.x * scale + position_.x, v.y * scale + position_.y, color_);
+        float x = v.x;
+        float y = v.y;
+        if (isActiveRotation_) {
+            x = v.x * cosf(normRadian) - v.y * sinf(normRadian);
+            y = v.x * sinf(normRadian) + v.y * cosf(normRadian);
+        }
+        renderer.PutPixel(x * scale + position_.x, y * scale + position_.y, color_);
     }
 }
 
-void HeartScene::DrawSceneGui() { ImGui::TextDisabled("No Scene Data."); }
+void HeartScene::DrawSceneGui() { ImGui::Text(("Degree : " + std::to_string(normDeg_)).c_str()); }
 
 void HeartScene::DrawInspectorGui() {
     ImGui::DragFloat2("Position", &position_.x);
     ImGui::DragFloat("Scale", &scale_);
     ImGui::DragFloat("Amplitude", &amplitude_);
+    ImGui::Checkbox("Is Active Rotation", &isActiveRotation_);
     ImGui::ColorEdit4("Color", &color_.r);
 }

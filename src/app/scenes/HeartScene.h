@@ -24,5 +24,8 @@ class HeartScene : public IScene {
     std::vector<sgm::vec2> hearts_;
     float scale_ = 5.0f;
     float amplitude_ = 5.0f;
+    bool isActiveRotation_ = false;
     Color4f color_{1.0f, 1.0f, 1.0f, 1.0f};
+
+    float normDeg_ = 0.0f;
 };
