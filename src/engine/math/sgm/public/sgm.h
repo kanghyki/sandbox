@@ -1,6 +1,8 @@
 #ifndef INCLUDED_SGM_H
 #define INCLUDED_SGM_H
 
+#include "mat2.h"
+#include "mat3.h"
 #include "mat4.h"
 #include "matrix.h"
 #include "matrix_func.h"

@@ -6,6 +6,8 @@
 namespace sgm {
 template <size_t R, size_t C, typename T> struct mat;
 
+typedef mat<2, 2, float> mat2;
+typedef mat<3, 3, float> mat3;
 typedef mat<4, 4, float> mat4;
 
 template <size_t R, size_t C, typename T> const T* value_ptr(const mat<R, C, T>& m) {

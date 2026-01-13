@@ -95,7 +95,7 @@ template <typename T> vec<4, T> operator*(vec<4, T> const& v, mat<4, 4, T> const
 
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
-            ret[i] += v[i] * mat[i][j];
+            ret[j] += v[i] * mat[j][i];
         }
     }
 
