@@ -1,6 +1,7 @@
 imgui.ini
 sandbox
 build
+build-*
 obj
 *.o
 .cache
