@@ -19,7 +19,7 @@ configure-debug: generate_scenes
 	cmake -S . -B $(DEBUG_BUILD_DIR) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 build-debug: configure-debug
-	cmake --build $(DEBUG_BUILD_DIR)
+	cmake --build $(DEBUG_BUILD_DIR) --config Debug
 
 run-debug: build-debug
 	./$(DEBUG_BUILD_DIR)/src/sandbox
