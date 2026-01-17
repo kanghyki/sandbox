@@ -8,3 +8,4 @@ obj
 .cache
 .DS_Store
 SceneRegistry.cpp
+*.sh
