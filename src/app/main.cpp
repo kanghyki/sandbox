@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <string>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
@@ -23,6 +24,67 @@
 
 namespace {
 EditorUi g_editor_ui{};
+
+struct SceneSelection {
+    bool has_selection = false;
+    bool by_index = false;
+    size_t index = 0;
+    std::string name;
+};
+
+bool IsNumber(const std::string& value) {
+    if (value.empty()) {
+        return false;
+    }
+    for (char c : value) {
+        if (c < '0' || c > '9') {
+            return false;
+        }
+    }
+    return true;
+}
+
+SceneSelection ParseSceneSelection(int argc, char** argv) {
+    SceneSelection selection;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i] ? argv[i] : "";
+        if (arg == "--scene" && i + 1 < argc) {
+            selection.has_selection = true;
+            selection.by_index = false;
+            selection.name = argv[++i] ? argv[i] : "";
+        } else if (arg.rfind("--scene=", 0) == 0) {
+            selection.has_selection = true;
+            selection.by_index = false;
+            selection.name = arg.substr(std::string("--scene=").size());
+        } else if (arg == "--scene-index" && i + 1 < argc) {
+            selection.has_selection = true;
+            selection.by_index = true;
+            selection.index = static_cast<size_t>(std::max(0, std::atoi(argv[++i])));
+        } else if (arg.rfind("--scene-index=", 0) == 0) {
+            selection.has_selection = true;
+            selection.by_index = true;
+            std::string value = arg.substr(std::string("--scene-index=").size());
+            selection.index = static_cast<size_t>(std::max(0, std::atoi(value.c_str())));
+        } else if (arg.rfind("--scene_index=", 0) == 0) {
+            selection.has_selection = true;
+            selection.by_index = true;
+            std::string value = arg.substr(std::string("--scene_index=").size());
+            selection.index = static_cast<size_t>(std::max(0, std::atoi(value.c_str())));
+        }
+    }
+    return selection;
+}
+
+size_t FindSceneIndexByName(SceneManager& scenes, const std::string& name) {
+    size_t count = scenes.SceneCount();
+    for (size_t i = 0; i < count; ++i) {
+        const IScene* scene = scenes.GetScene(i);
+        if (scene && name == scene->Name()) {
+            return i;
+        }
+    }
+    return static_cast<size_t>(-1);
+}
 
 struct AppState {
     std::unique_ptr<IWindow> window;
@@ -33,7 +95,7 @@ struct AppState {
     double last_time = 0.0;
     bool initialized = false;
 
-    bool Init() {
+    bool Init(int argc, char** argv) {
         window = std::make_unique<GlfwWindow>(960, 600, "Sandbox");
         if (!window || !window->IsValid()) {
             Logger::Error("Failed to create GLFW window.");
@@ -68,6 +130,34 @@ struct AppState {
         Logger::Info("Editor initialized.");
 
         RegisterScenes(scenes);
+        SceneSelection selection = ParseSceneSelection(argc, argv);
+        if (selection.has_selection) {
+            g_editor_ui.SetFocusViewport(true);
+            if (selection.by_index) {
+                if (selection.index < scenes.SceneCount()) {
+                    scenes.SetActiveIndex(selection.index);
+                    Logger::Info("Scene selected by index: " + std::to_string(selection.index));
+                } else {
+                    Logger::Warn("Scene index out of range: " + std::to_string(selection.index));
+                }
+            } else if (!selection.name.empty()) {
+                size_t idx = FindSceneIndexByName(scenes, selection.name);
+                if (idx != static_cast<size_t>(-1)) {
+                    scenes.SetActiveIndex(idx);
+                    Logger::Info("Scene selected by name: " + selection.name);
+                } else if (IsNumber(selection.name)) {
+                    size_t numeric = static_cast<size_t>(std::atoi(selection.name.c_str()));
+                    if (numeric < scenes.SceneCount()) {
+                        scenes.SetActiveIndex(numeric);
+                        Logger::Info("Scene selected by numeric name: " + std::to_string(numeric));
+                    } else {
+                        Logger::Warn("Scene numeric name out of range: " + selection.name);
+                    }
+                } else {
+                    Logger::Warn("Scene not found: " + selection.name);
+                }
+            }
+        }
 
         last_time = glfwGetTime();
         initialized = true;
@@ -212,11 +302,8 @@ void MainLoop(void* arg) {
 } // namespace
 
 int main(int argc, char** argv) {
-    (void)argc;
-    (void)argv;
-
     g_app = std::make_unique<AppState>();
-    if (!g_app->Init()) {
+    if (!g_app->Init(argc, argv)) {
         g_app.reset();
         return 1;
     }

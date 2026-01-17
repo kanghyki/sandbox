@@ -20,6 +20,7 @@ class EditorUi {
     bool ConsumeStopRequested();
     bool VsyncEnabled() const { return vsync_enabled_; }
     bool ShowFpsOverlay() const { return show_fps_overlay_; }
+    void SetFocusViewport(bool enabled) { focus_viewport_ = enabled; }
 
   private:
     bool dock_built_ = false;
@@ -42,4 +43,5 @@ class EditorUi {
     int viewport_target_width_ = 960;
     int viewport_target_height_ = 540;
     int viewport_resolution_index_ = 5;
+    bool focus_viewport_ = false;
 };

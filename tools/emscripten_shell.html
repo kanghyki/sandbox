@@ -27,9 +27,22 @@
   <body>
     <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
     <script>
-      var Module = {
-        canvas: (function () { return document.getElementById('canvas'); })(),
-      };
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var scene = params.get('scene');
+        var sceneIndex = params.get('sceneIndex') || params.get('scene_index');
+        var args = [];
+        if (sceneIndex) {
+          args.push('--scene-index', sceneIndex);
+        }
+        if (scene) {
+          args.push('--scene', scene);
+        }
+        window.Module = {
+          canvas: (function () { return document.getElementById('canvas'); })(),
+          arguments: args
+        };
+      })();
     </script>
     {{{ SCRIPT }}}
   </body>

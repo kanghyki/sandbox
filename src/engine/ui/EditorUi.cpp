@@ -76,6 +76,86 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, int wi
     const ImGuiDockNodeFlags dock_flags = ImGuiDockNodeFlags_PassthruCentralNode;
     viewport_has_mouse_ = false;
 
+    if (focus_viewport_) {
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGuiWindowFlags focus_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+                                       ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                                       ImGuiWindowFlags_NoMove |
+                                       ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                       ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+
+        ImGui::SetNextWindowPos(viewport->Pos);
+        ImGui::SetNextWindowSize(viewport->Size);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("ViewportFocus", nullptr, focus_flags);
+        ImGui::PopStyleVar(3);
+
+        ImVec2 image_pos{};
+        ImVec2 image_size{};
+        DrawViewportImage(texture_id, fb_width, fb_height, &image_pos, &image_size);
+
+        if (show_fps_overlay_) {
+            ImGuiIO& io = ImGui::GetIO();
+            float fps = io.Framerate;
+            char text[64] = {};
+            std::snprintf(text, sizeof(text), "%.1f FPS", fps);
+
+            ImVec2 pad(6.0f, 4.0f);
+            ImVec2 text_size = ImGui::CalcTextSize(text);
+            ImVec2 pos(image_pos.x + image_size.x - text_size.x - pad.x * 2.0f - 8.0f,
+                       image_pos.y + 8.0f);
+            ImGui::SetCursorScreenPos(pos);
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.11f, 0.14f, 0.85f));
+            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+            ImGui::BeginChild("##fps_overlay_focus",
+                              ImVec2(text_size.x + pad.x * 2.0f, text_size.y + pad.y * 2.0f), false,
+                              ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav);
+            ImGui::SetCursorPos(pad);
+            ImGui::TextUnformatted(text);
+            ImGui::EndChild();
+            ImGui::PopStyleVar();
+            ImGui::PopStyleColor();
+        }
+
+        ImGuiIO& io = ImGui::GetIO();
+        ImVec2 mouse = io.MousePos;
+        bool inside = mouse.x >= image_pos.x && mouse.y >= image_pos.y &&
+                      mouse.x <= image_pos.x + image_size.x &&
+                      mouse.y <= image_pos.y + image_size.y;
+        if (inside && image_size.x > 0.0f && image_size.y > 0.0f && fb_width > 0 && fb_height > 0) {
+            float local_x = mouse.x - image_pos.x;
+            float local_y = mouse.y - image_pos.y;
+            int px = static_cast<int>((local_x / image_size.x) * fb_width);
+            int py = static_cast<int>((local_y / image_size.y) * fb_height);
+            px = std::clamp(px, 0, fb_width - 1);
+            py = std::clamp(py, 0, fb_height - 1);
+            viewport_has_mouse_ = true;
+            viewport_mouse_x_ = px;
+            viewport_mouse_y_ = fb_height - 1 - py;
+        }
+
+        ImGui::End();
+
+        ImGuiWindowFlags overlay_flags =
+            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+            ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoNav;
+        ImGui::SetNextWindowPos(
+            ImVec2(viewport->Pos.x + viewport->Size.x - 12.0f, viewport->Pos.y + 12.0f),
+            ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::SetNextWindowBgAlpha(0.35f);
+        ImGui::Begin("ViewportFocusControls", nullptr, overlay_flags);
+        if (ImGui::Button("Reduce")) {
+            focus_viewport_ = false;
+        }
+        ImGui::End();
+        return;
+    }
+
     ImGuiWindowFlags window_flags =
         ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
@@ -199,6 +279,10 @@ void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, int wi
 
     if (show_viewport_) {
         if (ImGui::Begin("Scene for Camera A", &show_viewport_)) {
+            if (ImGui::Button("Focus View")) {
+                focus_viewport_ = true;
+            }
+            ImGui::Separator();
             ImVec2 avail = ImGui::GetContentRegionAvail();
             ImVec2 image_pos{};
             ImVec2 image_size{};
