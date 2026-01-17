@@ -5,6 +5,10 @@
 #include <fstream>
 #include <imgui.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/html5.h>
+#endif
+
 
 namespace {
 void ApplyEditorStyle() {
@@ -63,6 +67,32 @@ void ApplyEditorStyle() {
     colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.05f, 0.07f, 0.09f, 1.00f);
     colors[ImGuiCol_DragDropTarget] = ImVec4(0.29f, 0.78f, 0.74f, 0.90f);
 }
+
+bool IsWebGL2() {
+#if defined(__EMSCRIPTEN__)
+    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_get_current_context();
+    if (ctx) {
+        EmscriptenWebGLContextAttributes attrs;
+        emscripten_webgl_init_context_attributes(&attrs);
+        if (emscripten_webgl_get_context_attributes(ctx, &attrs) == EMSCRIPTEN_RESULT_SUCCESS) {
+            if (attrs.majorVersion >= 2) {
+                return true;
+            }
+        }
+    }
+    return false;
+#else
+    return true;
+#endif
+}
+
+const char* SelectGlslVersion() {
+#if defined(__EMSCRIPTEN__)
+    return IsWebGL2() ? "#version 300 es" : "#version 100";
+#else
+    return "#version 330";
+#endif
+}
 } // namespace
 
 bool ImGuiLayer::Init(GLFWwindow* window) {
@@ -93,11 +123,7 @@ bool ImGuiLayer::Init(GLFWwindow* window) {
     ApplyEditorStyle();
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-#ifdef __EMSCRIPTEN__
-    ImGui_ImplOpenGL3_Init("#version 300 es");
-#else
-    ImGui_ImplOpenGL3_Init("#version 330");
-#endif
+    ImGui_ImplOpenGL3_Init(SelectGlslVersion());
 
     initialized_ = true;
     return true;

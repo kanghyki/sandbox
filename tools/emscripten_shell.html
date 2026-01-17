@@ -28,6 +28,20 @@
     <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
     <script>
       (function () {
+        if (!document.exitPointerLock) {
+          if (document.webkitExitPointerLock) {
+            document.exitPointerLock = document.webkitExitPointerLock.bind(document);
+          } else {
+            document.exitPointerLock = function () {};
+          }
+        }
+        if (!Element.prototype.requestPointerLock) {
+          if (Element.prototype.webkitRequestPointerLock) {
+            Element.prototype.requestPointerLock = Element.prototype.webkitRequestPointerLock;
+          } else {
+            Element.prototype.requestPointerLock = function () {};
+          }
+        }
         var params = new URLSearchParams(window.location.search);
         var scene = params.get('scene');
         var sceneIndex = params.get('sceneIndex') || params.get('scene_index');

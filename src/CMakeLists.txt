@@ -97,8 +97,8 @@ if(EMSCRIPTEN)
   target_link_options(sandbox PRIVATE
     -O2
     -sUSE_GLFW=3
-    -sFULL_ES3=1
-    -sMIN_WEBGL_VERSION=2
+    -sFULL_ES3=0
+    -sMIN_WEBGL_VERSION=1
     -sMAX_WEBGL_VERSION=2
     -sWASM=1
     --shell-file ${CMAKE_SOURCE_DIR}/tools/emscripten_shell.html

@@ -21,4 +21,5 @@ class GlPresenter {
     int tex_width_ = 0;
     int tex_height_ = 0;
     bool initialized_ = false;
+    bool webgl2_ = false;
 };
