@@ -17,58 +17,78 @@
 #include <iostream>
 #include <memory>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#endif
+
 namespace {
 EditorUi g_editor_ui{};
-} // namespace
 
-int main(int argc, char** argv) {
-    (void)argc;
-    (void)argv;
-
-    std::unique_ptr<IWindow> window = std::make_unique<GlfwWindow>(960, 600, "Sandbox");
-    if (!window->IsValid()) {
-        Logger::Error("Failed to create GLFW window.");
-        return 1;
-    }
-
-    GLFWwindow* glfw_window = static_cast<GLFWwindow*>(window->NativeHandle());
-    if (!glfw_window) {
-        return 1;
-    }
-    glfwMaximizeWindow(glfw_window);
-
-    int fb_width = 0;
-    int fb_height = 0;
-    window->GetFramebufferSize(&fb_width, &fb_height);
-    std::unique_ptr<IRenderer> renderer = std::make_unique<PixelRenderer>(fb_width, fb_height);
-
+struct AppState {
+    std::unique_ptr<IWindow> window;
+    std::unique_ptr<IRenderer> renderer;
     GlPresenter presenter;
-    if (!presenter.Init()) {
-        std::cerr << "Failed to initialize OpenGL presenter\n";
-        Logger::Error("Failed to initialize OpenGL presenter.");
-        return 1;
-    }
-
     ImGuiLayer imgui;
-    if (!imgui.Init(glfw_window)) {
-        std::cerr << "Failed to initialize ImGui\n";
-        Logger::Error("Failed to initialize ImGui.");
-        return 1;
+    SceneManager scenes;
+    double last_time = 0.0;
+    bool initialized = false;
+
+    bool Init() {
+        window = std::make_unique<GlfwWindow>(960, 600, "Sandbox");
+        if (!window || !window->IsValid()) {
+            Logger::Error("Failed to create GLFW window.");
+            return false;
+        }
+
+        GLFWwindow* glfw_window = static_cast<GLFWwindow*>(window->NativeHandle());
+        if (!glfw_window) {
+            return false;
+        }
+#ifndef __EMSCRIPTEN__
+        glfwMaximizeWindow(glfw_window);
+#endif
+
+        int fb_width = 0;
+        int fb_height = 0;
+        window->GetFramebufferSize(&fb_width, &fb_height);
+        renderer = std::make_unique<PixelRenderer>(fb_width, fb_height);
+
+        if (!presenter.Init()) {
+            std::cerr << "Failed to initialize OpenGL presenter\n";
+            Logger::Error("Failed to initialize OpenGL presenter.");
+            return false;
+        }
+
+        if (!imgui.Init(glfw_window)) {
+            std::cerr << "Failed to initialize ImGui\n";
+            Logger::Error("Failed to initialize ImGui.");
+            return false;
+        }
+
+        Logger::Info("Editor initialized.");
+
+        RegisterScenes(scenes);
+
+        last_time = glfwGetTime();
+        initialized = true;
+        return true;
     }
 
-    Logger::Info("Editor initialized.");
+    bool Frame() {
+        if (!initialized) {
+            return false;
+        }
+        if (window->ShouldClose()) {
+            return false;
+        }
 
-    SceneManager scenes;
-    RegisterScenes(scenes);
-
-    double last_time = glfwGetTime();
-
-    while (!window->ShouldClose()) {
         window->PollEvents();
 
+        int fb_width = 0;
+        int fb_height = 0;
         window->GetFramebufferSize(&fb_width, &fb_height);
         if (fb_width == 0 || fb_height == 0) {
-            continue;
+            return true;
         }
 
         int desired_width = g_editor_ui.ViewportTargetWidth();
@@ -129,7 +149,6 @@ int main(int argc, char** argv) {
             scene->Render(*renderer);
         }
 
-
         int viewport_mouse_x = 0;
         int viewport_mouse_y = 0;
         bool has_viewport_mouse =
@@ -164,9 +183,51 @@ int main(int argc, char** argv) {
         imgui.EndFrame();
 
         window->SwapBuffers();
+        return !window->ShouldClose();
     }
 
-    imgui.Shutdown();
-    presenter.Shutdown();
+    void Shutdown() {
+        if (!initialized) {
+            return;
+        }
+        imgui.Shutdown();
+        presenter.Shutdown();
+        renderer.reset();
+        window.reset();
+        initialized = false;
+    }
+};
+
+std::unique_ptr<AppState> g_app;
+
+#ifdef __EMSCRIPTEN__
+void MainLoop(void* arg) {
+    auto* app = static_cast<AppState*>(arg);
+    if (!app->Frame()) {
+        app->Shutdown();
+        emscripten_cancel_main_loop();
+    }
+}
+#endif
+} // namespace
+
+int main(int argc, char** argv) {
+    (void)argc;
+    (void)argv;
+
+    g_app = std::make_unique<AppState>();
+    if (!g_app->Init()) {
+        g_app.reset();
+        return 1;
+    }
+
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg(MainLoop, g_app.get(), 0, true);
     return 0;
+#else
+    while (g_app->Frame()) {}
+    g_app->Shutdown();
+    g_app.reset();
+    return 0;
+#endif
 }

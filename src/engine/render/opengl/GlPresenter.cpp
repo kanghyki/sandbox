@@ -2,7 +2,9 @@
 
 #include <iostream>
 
-#if defined(__APPLE__)
+#if defined(__EMSCRIPTEN__)
+#include <GLES3/gl3.h>
+#elif defined(__APPLE__)
 #include <OpenGL/gl3.h>
 #else
 #include <GL/gl.h>
@@ -25,6 +27,25 @@ unsigned int CompileShader(unsigned int type, const char* source) {
 }
 
 unsigned int CreateProgram() {
+#if defined(__EMSCRIPTEN__)
+    const char* vertex_source = "#version 300 es\n"
+                                "layout(location = 0) in vec2 a_pos;\n"
+                                "layout(location = 1) in vec2 a_uv;\n"
+                                "out vec2 v_uv;\n"
+                                "void main() {\n"
+                                "  v_uv = a_uv;\n"
+                                "  gl_Position = vec4(a_pos, 0.0, 1.0);\n"
+                                "}\n";
+
+    const char* fragment_source = "#version 300 es\n"
+                                  "precision mediump float;\n"
+                                  "in vec2 v_uv;\n"
+                                  "out vec4 frag_color;\n"
+                                  "uniform sampler2D u_tex;\n"
+                                  "void main() {\n"
+                                  "  frag_color = texture(u_tex, v_uv);\n"
+                                  "}\n";
+#else
     const char* vertex_source = "#version 330 core\n"
                                 "layout(location = 0) in vec2 a_pos;\n"
                                 "layout(location = 1) in vec2 a_uv;\n"
@@ -41,6 +62,7 @@ unsigned int CreateProgram() {
                                   "void main() {\n"
                                   "  frag_color = texture(u_tex, v_uv);\n"
                                   "}\n";
+#endif
 
     unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertex_source);
     unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragment_source);

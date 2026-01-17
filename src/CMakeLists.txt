@@ -1,15 +1,19 @@
 include(FetchContent)
 
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+if(EMSCRIPTEN)
+  add_library(glfw INTERFACE)
+else()
+  set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+  set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-FetchContent_Declare(
-  glfw
-  GIT_REPOSITORY https://github.com/glfw/glfw.git
-  GIT_TAG 3.3.8
-)
-FetchContent_MakeAvailable(glfw)
+  FetchContent_Declare(
+    glfw
+    GIT_REPOSITORY https://github.com/glfw/glfw.git
+    GIT_TAG 3.3.8
+  )
+  FetchContent_MakeAvailable(glfw)
+endif()
 
 FetchContent_Declare(
   imgui
@@ -18,7 +22,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
-find_package(OpenGL REQUIRED)
+if(EMSCRIPTEN)
+  set(OPENGL_LIBS "")
+else()
+  find_package(OpenGL REQUIRED)
+  set(OPENGL_LIBS OpenGL::GL)
+endif()
 
 add_library(imgui_lib
   ${imgui_SOURCE_DIR}/imgui.cpp
@@ -34,7 +43,7 @@ target_include_directories(imgui_lib PUBLIC
   ${imgui_SOURCE_DIR}/backends
 )
 
-target_link_libraries(imgui_lib PUBLIC glfw OpenGL::GL)
+target_link_libraries(imgui_lib PUBLIC glfw ${OPENGL_LIBS})
 
 add_library(engine
   engine/core/Color4f.h
@@ -63,7 +72,7 @@ target_include_directories(engine PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/engine/math/sgm/public
 )
-target_link_libraries(engine PUBLIC glfw OpenGL::GL imgui_lib)
+target_link_libraries(engine PUBLIC glfw ${OPENGL_LIBS} imgui_lib)
 
 if(APPLE)
   target_compile_definitions(engine PUBLIC GL_SILENCE_DEPRECATION)
@@ -80,3 +89,18 @@ add_executable(sandbox
 )
 
 target_link_libraries(sandbox PRIVATE engine)
+
+if(EMSCRIPTEN)
+  set_target_properties(sandbox PROPERTIES OUTPUT_NAME "index" SUFFIX ".html")
+  set_target_properties(sandbox PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/dist")
+  target_compile_options(sandbox PRIVATE -O2)
+  target_link_options(sandbox PRIVATE
+    -O2
+    -sUSE_GLFW=3
+    -sFULL_ES3=1
+    -sMIN_WEBGL_VERSION=2
+    -sMAX_WEBGL_VERSION=2
+    -sWASM=1
+    --shell-file ${CMAKE_SOURCE_DIR}/tools/emscripten_shell.html
+  )
+endif()

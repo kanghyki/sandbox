@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sandbox</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0b0f14;
+      }
+      #canvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+        background: #0b0f14;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <script>
+      var Module = {
+        canvas: (function () { return document.getElementById('canvas'); })(),
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>

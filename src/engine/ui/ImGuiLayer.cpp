@@ -5,6 +5,7 @@
 #include <fstream>
 #include <imgui.h>
 
+
 namespace {
 void ApplyEditorStyle() {
     ImGuiStyle& style = ImGui::GetStyle();
@@ -77,6 +78,9 @@ bool ImGuiLayer::Init(GLFWwindow* window) {
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
+#ifdef __EMSCRIPTEN__
+    io.IniFilename = nullptr;
+#else
     io.IniFilename = "imgui.ini";
     if (io.IniFilename && io.IniFilename[0] != '\0') {
         std::ifstream ini_file(io.IniFilename);
@@ -84,11 +88,16 @@ bool ImGuiLayer::Init(GLFWwindow* window) {
             ImGui::LoadIniSettingsFromDisk(io.IniFilename);
         }
     }
+#endif
 
     ApplyEditorStyle();
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplOpenGL3_Init("#version 300 es");
+#else
     ImGui_ImplOpenGL3_Init("#version 330");
+#endif
 
     initialized_ = true;
     return true;
@@ -99,9 +108,11 @@ void ImGuiLayer::Shutdown() {
         return;
     }
     ImGuiIO& io = ImGui::GetIO();
+#ifndef __EMSCRIPTEN__
     if (io.IniFilename && io.IniFilename[0] != '\0') {
         ImGui::SaveIniSettingsToDisk(io.IniFilename);
     }
+#endif
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
