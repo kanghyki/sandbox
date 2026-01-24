@@ -2,30 +2,13 @@
 
 #include <iostream>
 
-#if defined(__EMSCRIPTEN__)
-#include <GLES3/gl3.h>
-#include <emscripten/html5.h>
-#elif defined(__APPLE__)
+#if defined(__APPLE__)
 #include <OpenGL/gl3.h>
 #else
 #include <GL/gl.h>
 #endif
 
 namespace {
-bool IsWebGL2Context() {
-#if defined(__EMSCRIPTEN__)
-    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_get_current_context();
-    if (ctx) {
-        EmscriptenWebGLContextAttributes attrs;
-        emscripten_webgl_init_context_attributes(&attrs);
-        if (emscripten_webgl_get_context_attributes(ctx, &attrs) == EMSCRIPTEN_RESULT_SUCCESS) {
-            return attrs.majorVersion >= 2;
-        }
-    }
-#endif
-    return false;
-}
-
 unsigned int CompileShader(unsigned int type, const char* source) {
     unsigned int shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, nullptr);
@@ -41,42 +24,7 @@ unsigned int CompileShader(unsigned int type, const char* source) {
     return shader;
 }
 
-unsigned int CreateProgram(bool webgl2) {
-#if defined(__EMSCRIPTEN__)
-    const char* vertex_source = webgl2 ? "#version 300 es\n"
-                                         "in vec2 a_pos;\n"
-                                         "in vec2 a_uv;\n"
-                                         "out vec2 v_uv;\n"
-                                         "void main() {\n"
-                                         "  v_uv = a_uv;\n"
-                                         "  gl_Position = vec4(a_pos, 0.0, 1.0);\n"
-                                         "}\n"
-                                       : "#version 100\n"
-                                         "attribute vec2 a_pos;\n"
-                                         "attribute vec2 a_uv;\n"
-                                         "varying vec2 v_uv;\n"
-                                         "void main() {\n"
-                                         "  v_uv = a_uv;\n"
-                                         "  gl_Position = vec4(a_pos, 0.0, 1.0);\n"
-                                         "}\n";
-
-    const char* fragment_source = webgl2 ? "#version 300 es\n"
-                                           "precision mediump float;\n"
-                                           "in vec2 v_uv;\n"
-                                           "out vec4 frag_color;\n"
-                                           "uniform sampler2D u_tex;\n"
-                                           "void main() {\n"
-                                           "  frag_color = texture(u_tex, v_uv);\n"
-                                           "}\n"
-                                         : "#version 100\n"
-                                           "precision mediump float;\n"
-                                           "varying vec2 v_uv;\n"
-                                           "uniform sampler2D u_tex;\n"
-                                           "void main() {\n"
-                                           "  gl_FragColor = texture2D(u_tex, v_uv);\n"
-                                           "}\n";
-#else
-    (void)webgl2;
+unsigned int CreateProgram() {
     const char* vertex_source = "#version 330 core\n"
                                 "in vec2 a_pos;\n"
                                 "in vec2 a_uv;\n"
@@ -93,7 +41,6 @@ unsigned int CreateProgram(bool webgl2) {
                                   "void main() {\n"
                                   "  frag_color = texture(u_tex, v_uv);\n"
                                   "}\n";
-#endif
 
     unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertex_source);
     unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragment_source);
@@ -124,8 +71,7 @@ bool GlPresenter::Init() {
         return true;
     }
 
-    webgl2_ = IsWebGL2Context();
-    program_ = CreateProgram(webgl2_);
+    program_ = CreateProgram();
     if (!program_) {
         return false;
     }
@@ -136,14 +82,10 @@ bool GlPresenter::Init() {
     };
     const unsigned short indices[] = {0, 1, 2, 2, 3, 0};
 
-    if (webgl2_) {
-        glGenVertexArrays(1, &vao_);
-    }
+    glGenVertexArrays(1, &vao_);
     glGenBuffers(1, &vbo_);
     glGenBuffers(1, &ebo_);
-    if (webgl2_) {
-        glBindVertexArray(vao_);
-    }
+    glBindVertexArray(vao_);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -157,10 +99,8 @@ bool GlPresenter::Init() {
                           reinterpret_cast<void*>(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    if (webgl2_) {
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-    }
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 
     glGenTextures(1, &texture_);
     glBindTexture(GL_TEXTURE_2D, texture_);
@@ -261,22 +201,9 @@ void GlPresenter::DrawFullscreen() {
 
     glUseProgram(program_);
     glActiveTexture(GL_TEXTURE0);
-    if (webgl2_) {
-        glBindVertexArray(vao_);
-    } else {
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                              reinterpret_cast<void*>(0));
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                              reinterpret_cast<void*>(2 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-    }
+    glBindVertexArray(vao_);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
-    if (webgl2_) {
-        glBindVertexArray(0);
-    }
+    glBindVertexArray(0);
     glUseProgram(0);
 }
 

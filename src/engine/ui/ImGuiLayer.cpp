@@ -1,14 +1,13 @@
 #include "engine/ui/ImGuiLayer.h"
 
 #include <backends/imgui_impl_glfw.h>
+#if defined(SANDBOX_D3D11)
+#include <backends/imgui_impl_dx11.h>
+#else
 #include <backends/imgui_impl_opengl3.h>
+#endif
 #include <fstream>
 #include <imgui.h>
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten/html5.h>
-#endif
-
 
 namespace {
 void ApplyEditorStyle() {
@@ -68,49 +67,31 @@ void ApplyEditorStyle() {
     colors[ImGuiCol_DragDropTarget] = ImVec4(0.29f, 0.78f, 0.74f, 0.90f);
 }
 
-bool IsWebGL2() {
-#if defined(__EMSCRIPTEN__)
-    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_get_current_context();
-    if (ctx) {
-        EmscriptenWebGLContextAttributes attrs;
-        emscripten_webgl_init_context_attributes(&attrs);
-        if (emscripten_webgl_get_context_attributes(ctx, &attrs) == EMSCRIPTEN_RESULT_SUCCESS) {
-            if (attrs.majorVersion >= 2) {
-                return true;
-            }
-        }
-    }
-    return false;
-#else
-    return true;
-#endif
-}
-
-const char* SelectGlslVersion() {
-#if defined(__EMSCRIPTEN__)
-    return IsWebGL2() ? "#version 300 es" : "#version 100";
-#else
-    return "#version 330";
-#endif
-}
+const char* SelectGlslVersion() { return "#version 330"; }
 } // namespace
 
+#if defined(SANDBOX_D3D11)
+bool ImGuiLayer::Init(GLFWwindow* window, ID3D11Device* device, ID3D11DeviceContext* context) {
+#else
 bool ImGuiLayer::Init(GLFWwindow* window) {
+#endif
     if (initialized_) {
         return true;
     }
     if (!window) {
         return false;
     }
+#if defined(SANDBOX_D3D11)
+    if (!device || !context) {
+        return false;
+    }
+#endif
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
-#ifdef __EMSCRIPTEN__
-    io.IniFilename = nullptr;
-#else
     io.IniFilename = "imgui.ini";
     if (io.IniFilename && io.IniFilename[0] != '\0') {
         std::ifstream ini_file(io.IniFilename);
@@ -118,12 +99,16 @@ bool ImGuiLayer::Init(GLFWwindow* window) {
             ImGui::LoadIniSettingsFromDisk(io.IniFilename);
         }
     }
-#endif
 
     ApplyEditorStyle();
 
+#if defined(SANDBOX_D3D11)
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplDX11_Init(device, context);
+#else
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(SelectGlslVersion());
+#endif
 
     initialized_ = true;
     return true;
@@ -134,12 +119,14 @@ void ImGuiLayer::Shutdown() {
         return;
     }
     ImGuiIO& io = ImGui::GetIO();
-#ifndef __EMSCRIPTEN__
     if (io.IniFilename && io.IniFilename[0] != '\0') {
         ImGui::SaveIniSettingsToDisk(io.IniFilename);
     }
-#endif
+#if defined(SANDBOX_D3D11)
+    ImGui_ImplDX11_Shutdown();
+#else
     ImGui_ImplOpenGL3_Shutdown();
+#endif
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     initialized_ = false;
@@ -149,7 +136,11 @@ void ImGuiLayer::BeginFrame() {
     if (!initialized_) {
         return;
     }
+#if defined(SANDBOX_D3D11)
+    ImGui_ImplDX11_NewFrame();
+#else
     ImGui_ImplOpenGL3_NewFrame();
+#endif
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 }
@@ -159,13 +150,19 @@ void ImGuiLayer::EndFrame() {
         return;
     }
     ImGui::Render();
+#if defined(SANDBOX_D3D11)
+    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+#else
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#endif
 
     ImGuiIO& io = ImGui::GetIO();
+#if !defined(SANDBOX_D3D11)
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         GLFWwindow* backup = glfwGetCurrentContext();
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
         glfwMakeContextCurrent(backup);
     }
+#endif
 }

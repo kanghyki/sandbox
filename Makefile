@@ -1,8 +1,8 @@
 BUILD_DIR ?= build
 DEBUG_BUILD_DIR ?= build-debug
-WEB_BUILD_DIR ?= build-web
-EMSDK_PATH ?= $(HOME)/emsdk
-EMSDK_ENV ?= $(EMSDK_PATH)/emsdk_env.sh
+WIN_BUILD_DIR ?= build-win
+WIN_GENERATOR ?= Visual Studio 17 2022
+WIN_CONFIG ?= Release
 
 all: build
 
@@ -27,19 +27,19 @@ build-debug: configure-debug
 run-debug: build-debug
 	./$(DEBUG_BUILD_DIR)/src/sandbox
 
-configure-web: generate_scenes
-	bash -lc "source $(EMSDK_ENV) && emcmake cmake -S . -B $(WEB_BUILD_DIR) -DCMAKE_BUILD_TYPE=Release"
+configure-win: generate_scenes
+	cmake -S . -B $(WIN_BUILD_DIR) -G "$(WIN_GENERATOR)"
 
-build-web: configure-web
-	cmake --build $(WEB_BUILD_DIR) -j
+build-win: configure-win
+	cmake --build $(WIN_BUILD_DIR) --config $(WIN_CONFIG)
 
-run-web: build-web
-	cd dist && python3 -m http.server 8000
+run-win: build-win
+	./$(WIN_BUILD_DIR)/src/$(WIN_CONFIG)/sandbox.exe
 
 clean:
-	rm -rf $(BUILD_DIR) $(DEBUG_BUILD_DIR) $(WEB_BUILD_DIR)
+	rm -rf $(BUILD_DIR) $(DEBUG_BUILD_DIR)
 
 format:
 	clang-format -i $(shell rg --files -g "*.c" -g "*.cc" -g "*.cpp" -g "*.h" -g "*.hpp" -g "*.hxx" -g "*.vert" -g "*.frag" src)
 
-.PHONY: all configure build run configure-debug build-debug run-debug configure-web build-web run-web clean format
+.PHONY: all configure build run configure-debug build-debug run-debug configure-win build-win run-win clean format

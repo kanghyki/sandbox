@@ -15,10 +15,8 @@ GlfwWindow::GlfwWindow(int width, int height, const char* title) {
         g_glfw_initialized = true;
     }
 
-#ifdef __EMSCRIPTEN__
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+#if defined(SANDBOX_D3D11)
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 #else
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -41,9 +39,11 @@ GlfwWindow::GlfwWindow(int width, int height, const char* title) {
     glfwGetWindowPos(window_, &windowed_x_, &windowed_y_);
     glfwGetWindowSize(window_, &windowed_w_, &windowed_h_);
 
+#if !defined(SANDBOX_D3D11)
     glfwMakeContextCurrent(window_);
     vsync_enabled_ = true;
     glfwSwapInterval(1);
+#endif
 
     glfwSetWindowUserPointer(window_, this);
     glfwSetKeyCallback(window_, KeyCallback);
@@ -95,15 +95,19 @@ void GlfwWindow::SetFullscreen(bool enabled) {
 
 void GlfwWindow::SetVsync(bool enabled) {
     vsync_enabled_ = enabled;
+#if !defined(SANDBOX_D3D11)
     glfwSwapInterval(enabled ? 1 : 0);
+#endif
 }
 
 void GlfwWindow::PollEvents() { glfwPollEvents(); }
 
 void GlfwWindow::SwapBuffers() {
+#if !defined(SANDBOX_D3D11)
     if (window_) {
         glfwSwapBuffers(window_);
     }
+#endif
 }
 
 void GlfwWindow::GetFramebufferSize(int* width, int* height) const {

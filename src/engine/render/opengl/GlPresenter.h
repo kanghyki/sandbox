@@ -2,6 +2,9 @@
 
 #include "engine/core/IRenderer.h"
 
+#include <cstdint>
+#include <imgui.h>
+
 class GlPresenter {
   public:
     bool Init();
@@ -10,7 +13,7 @@ class GlPresenter {
     bool Upload(const IRenderer& renderer);
     void DrawFullscreen();
     void Present(const IRenderer& renderer);
-    unsigned int TextureId() const { return texture_; }
+    ImTextureID TextureId() const { return (ImTextureID)(intptr_t)texture_; }
 
   private:
     unsigned int program_ = 0;
@@ -21,5 +24,4 @@ class GlPresenter {
     int tex_width_ = 0;
     int tex_height_ = 0;
     bool initialized_ = false;
-    bool webgl2_ = false;
 };

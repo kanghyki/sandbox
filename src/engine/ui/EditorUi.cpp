@@ -11,7 +11,7 @@
 #include <imgui_internal.h>
 
 namespace {
-void DrawViewportImage(unsigned int texture_id, int fb_width, int fb_height, ImVec2* out_pos,
+void DrawViewportImage(ImTextureID texture_id, int fb_width, int fb_height, ImVec2* out_pos,
                        ImVec2* out_size) {
     ImVec2 size = ImGui::GetContentRegionAvail();
     if (size.x <= 0.0f || size.y <= 0.0f) {
@@ -33,8 +33,11 @@ void DrawViewportImage(unsigned int texture_id, int fb_width, int fb_height, ImV
     }
     ImGui::SetCursorPos(ImVec2(cursor.x + padding.x, cursor.y + padding.y));
     ImVec2 image_pos = ImGui::GetCursorScreenPos();
-    ImGui::Image(reinterpret_cast<void*>(static_cast<intptr_t>(texture_id)), image_size,
-                 ImVec2(0, 1), ImVec2(1, 0));
+#if defined(SANDBOX_D3D11)
+    ImGui::Image(texture_id, image_size, ImVec2(0, 0), ImVec2(1, 1));
+#else
+    ImGui::Image(texture_id, image_size, ImVec2(0, 1), ImVec2(1, 0));
+#endif
     if (out_pos) {
         *out_pos = image_pos;
     }
@@ -71,7 +74,7 @@ void BuildDefaultDockLayout(ImGuiID dockspace_id) {
 }
 } // namespace
 
-void EditorUi::Draw(unsigned int texture_id, int fb_width, int fb_height, int win_width,
+void EditorUi::Draw(ImTextureID texture_id, int fb_width, int fb_height, int win_width,
                     int win_height, SceneManager& scenes) {
     const ImGuiDockNodeFlags dock_flags = ImGuiDockNodeFlags_PassthruCentralNode;
     viewport_has_mouse_ = false;

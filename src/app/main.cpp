@@ -5,7 +5,11 @@
 #include "engine/core/Logger.h"
 #include "engine/platform/glfw/GlfwWindow.h"
 #include "engine/render/PixelRenderer.h"
+#if defined(SANDBOX_D3D11)
+#include "engine/render/d3d11/D3d11Presenter.h"
+#else
 #include "engine/render/opengl/GlPresenter.h"
+#endif
 #include "engine/scene/FrameContext.h"
 #include "engine/scene/SceneManager.h"
 #include "engine/ui/EditorUi.h"
@@ -13,89 +17,27 @@
 
 #include <GLFW/glfw3.h>
 #include <cstdint>
-#include <cstdlib>
 #include <iostream>
 #include <memory>
-#include <string>
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#endif
 
 namespace {
 EditorUi g_editor_ui{};
 
-struct SceneSelection {
-    bool has_selection = false;
-    bool by_index = false;
-    size_t index = 0;
-    std::string name;
-};
-
-bool IsNumber(const std::string& value) {
-    if (value.empty()) {
-        return false;
-    }
-    for (char c : value) {
-        if (c < '0' || c > '9') {
-            return false;
-        }
-    }
-    return true;
-}
-
-SceneSelection ParseSceneSelection(int argc, char** argv) {
-    SceneSelection selection;
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i] ? argv[i] : "";
-        if (arg == "--scene" && i + 1 < argc) {
-            selection.has_selection = true;
-            selection.by_index = false;
-            selection.name = argv[++i] ? argv[i] : "";
-        } else if (arg.rfind("--scene=", 0) == 0) {
-            selection.has_selection = true;
-            selection.by_index = false;
-            selection.name = arg.substr(std::string("--scene=").size());
-        } else if (arg == "--scene-index" && i + 1 < argc) {
-            selection.has_selection = true;
-            selection.by_index = true;
-            selection.index = static_cast<size_t>(std::max(0, std::atoi(argv[++i])));
-        } else if (arg.rfind("--scene-index=", 0) == 0) {
-            selection.has_selection = true;
-            selection.by_index = true;
-            std::string value = arg.substr(std::string("--scene-index=").size());
-            selection.index = static_cast<size_t>(std::max(0, std::atoi(value.c_str())));
-        } else if (arg.rfind("--scene_index=", 0) == 0) {
-            selection.has_selection = true;
-            selection.by_index = true;
-            std::string value = arg.substr(std::string("--scene_index=").size());
-            selection.index = static_cast<size_t>(std::max(0, std::atoi(value.c_str())));
-        }
-    }
-    return selection;
-}
-
-size_t FindSceneIndexByName(SceneManager& scenes, const std::string& name) {
-    size_t count = scenes.SceneCount();
-    for (size_t i = 0; i < count; ++i) {
-        const IScene* scene = scenes.GetScene(i);
-        if (scene && name == scene->Name()) {
-            return i;
-        }
-    }
-    return static_cast<size_t>(-1);
-}
-
 struct AppState {
     std::unique_ptr<IWindow> window;
     std::unique_ptr<IRenderer> renderer;
+#if defined(SANDBOX_D3D11)
+    D3d11Presenter presenter;
+#else
     GlPresenter presenter;
+#endif
     ImGuiLayer imgui;
     SceneManager scenes;
     double last_time = 0.0;
     bool initialized = false;
 
-    bool Init(int argc, char** argv) {
+    bool Init() {
         window = std::make_unique<GlfwWindow>(960, 600, "Sandbox");
         if (!window || !window->IsValid()) {
             Logger::Error("Failed to create GLFW window.");
@@ -106,15 +48,26 @@ struct AppState {
         if (!glfw_window) {
             return false;
         }
-#ifndef __EMSCRIPTEN__
         glfwMaximizeWindow(glfw_window);
-#endif
 
         int fb_width = 0;
         int fb_height = 0;
         window->GetFramebufferSize(&fb_width, &fb_height);
         renderer = std::make_unique<PixelRenderer>(fb_width, fb_height);
 
+#if defined(SANDBOX_D3D11)
+        if (!presenter.Init(glfw_window)) {
+            std::cerr << "Failed to initialize D3D11 presenter\n";
+            Logger::Error("Failed to initialize D3D11 presenter.");
+            return false;
+        }
+
+        if (!imgui.Init(glfw_window, presenter.Device(), presenter.Context())) {
+            std::cerr << "Failed to initialize ImGui (D3D11)\n";
+            Logger::Error("Failed to initialize ImGui (D3D11).");
+            return false;
+        }
+#else
         if (!presenter.Init()) {
             std::cerr << "Failed to initialize OpenGL presenter\n";
             Logger::Error("Failed to initialize OpenGL presenter.");
@@ -126,38 +79,11 @@ struct AppState {
             Logger::Error("Failed to initialize ImGui.");
             return false;
         }
+#endif
 
         Logger::Info("Editor initialized.");
 
         RegisterScenes(scenes);
-        SceneSelection selection = ParseSceneSelection(argc, argv);
-        if (selection.has_selection) {
-            g_editor_ui.SetFocusViewport(true);
-            if (selection.by_index) {
-                if (selection.index < scenes.SceneCount()) {
-                    scenes.SetActiveIndex(selection.index);
-                    Logger::Info("Scene selected by index: " + std::to_string(selection.index));
-                } else {
-                    Logger::Warn("Scene index out of range: " + std::to_string(selection.index));
-                }
-            } else if (!selection.name.empty()) {
-                size_t idx = FindSceneIndexByName(scenes, selection.name);
-                if (idx != static_cast<size_t>(-1)) {
-                    scenes.SetActiveIndex(idx);
-                    Logger::Info("Scene selected by name: " + selection.name);
-                } else if (IsNumber(selection.name)) {
-                    size_t numeric = static_cast<size_t>(std::atoi(selection.name.c_str()));
-                    if (numeric < scenes.SceneCount()) {
-                        scenes.SetActiveIndex(numeric);
-                        Logger::Info("Scene selected by numeric name: " + std::to_string(numeric));
-                    } else {
-                        Logger::Warn("Scene numeric name out of range: " + selection.name);
-                    }
-                } else {
-                    Logger::Warn("Scene not found: " + selection.name);
-                }
-            }
-        }
 
         last_time = glfwGetTime();
         initialized = true;
@@ -264,15 +190,25 @@ struct AppState {
 
         presenter.Upload(*renderer);
 
+#if defined(SANDBOX_D3D11)
+        presenter.Resize(fb_width, fb_height);
+        presenter.BeginFrame(clear_color);
+#else
         glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
         glClear(GL_COLOR_BUFFER_BIT);
+#endif
 
         imgui.BeginFrame();
         g_editor_ui.Draw(presenter.TextureId(), renderer->Width(), renderer->Height(), win_width,
                          win_height, scenes);
         imgui.EndFrame();
 
+#if defined(SANDBOX_D3D11)
+        presenter.EndFrame();
+        presenter.Present(window->IsVsync());
+#else
         window->SwapBuffers();
+#endif
         return !window->ShouldClose();
     }
 
@@ -290,31 +226,17 @@ struct AppState {
 
 std::unique_ptr<AppState> g_app;
 
-#ifdef __EMSCRIPTEN__
-void MainLoop(void* arg) {
-    auto* app = static_cast<AppState*>(arg);
-    if (!app->Frame()) {
-        app->Shutdown();
-        emscripten_cancel_main_loop();
-    }
-}
-#endif
 } // namespace
 
 int main(int argc, char** argv) {
     g_app = std::make_unique<AppState>();
-    if (!g_app->Init(argc, argv)) {
+    if (!g_app->Init()) {
         g_app.reset();
         return 1;
     }
 
-#ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop_arg(MainLoop, g_app.get(), 0, true);
-    return 0;
-#else
     while (g_app->Frame()) {}
     g_app->Shutdown();
     g_app.reset();
     return 0;
-#endif
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <imgui.h>
+
 class EditorUi {
   public:
     enum class PlayState {
@@ -8,7 +10,7 @@ class EditorUi {
         Paused,
     };
 
-    void Draw(unsigned int texture_id, int fb_width, int fb_height, int win_width, int win_height,
+    void Draw(ImTextureID texture_id, int fb_width, int fb_height, int win_width, int win_height,
               class SceneManager& scenes);
     const float* ClearColor() const { return clear_color_; }
     bool GetViewportMousePixel(int* out_x, int* out_y) const;
